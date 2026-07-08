@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+.pytest_cache/
+.venv/
+venv/
+
+# HomeGuard scan outputs
+*_report.html
+*_report.json
+smoke_report.*
+
+# Local Claude Code config (machine-specific)
+.claude/settings.local.json

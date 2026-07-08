@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "homeguard"
+version = "0.1.0"
+description = "Privacy-first home network IoT security scanner — Have I Been Pwned, but for your router and smart devices."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "HomeGuard" }]
+keywords = ["security", "iot", "network", "scanner", "home", "privacy"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "Topic :: Security",
+    "Programming Language :: Python :: 3",
+]
+
+# The MVP runs entirely on the Python standard library so it works offline with
+# zero third-party install. `mac-vendor-lookup` is optional and only enriches
+# vendor labels; HomeGuard ships a small built-in OUI table as a fallback.
+dependencies = []
+
+[project.optional-dependencies]
+vendor = ["mac-vendor-lookup>=0.1.12"]
+dev = ["pytest>=7"]
+
+[project.scripts]
+homeguard = "homeguard.cli:main"
+
+[project.urls]
+Homepage = "https://example.com/homeguard"
+
+[tool.setuptools.packages.find]
+include = ["homeguard*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
