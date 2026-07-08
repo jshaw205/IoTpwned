@@ -103,6 +103,8 @@ def _render_host_console(host: Host, add, use_color: bool) -> None:
         add(f"    {badge} {f.title}")
         add(f"        Why:  {f.why}")
         add(f"        Fix:  {f.fix}")
+        if f.reference:
+            add(f"        Ref:  {f.reference}")
     add("")
 
 

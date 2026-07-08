@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from typing import List
 
+from .cve import cve_findings
 from .data import PORT_SPECS
 from .models import Finding, Host, ScanResult, Severity
 
@@ -52,6 +53,9 @@ def evaluate_host(host: Host) -> List[Finding]:
         )
 
     findings.extend(_cross_cutting_rules(host))
+
+    # Known-CVE matches against the fingerprinted device family.
+    findings.extend(cve_findings(host))
 
     # Most serious first, then by port for stable ordering.
     findings.sort(key=lambda f: (-f.severity.value, f.port or 0))

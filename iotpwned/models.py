@@ -71,6 +71,7 @@ class Finding:
     fix: str  # what the user should do about it
     port: Optional[int] = None
     evidence: str = ""
+    reference: str = ""  # optional advisory URL (e.g. a CVE detail page)
 
 
 @dataclass

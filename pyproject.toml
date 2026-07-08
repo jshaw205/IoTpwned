@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "iotpwned"
-version = "0.1.0"
+version = "0.2.0"
 description = "Privacy-first home network IoT security scanner — Have I Been Pwned, but for your router and smart devices."
 readme = "README.md"
 requires-python = ">=3.9"

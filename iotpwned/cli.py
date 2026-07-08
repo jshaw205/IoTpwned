@@ -187,6 +187,7 @@ def _write_json(result: ScanResult, path: str) -> None:
                         "why": f.why,
                         "fix": f.fix,
                         "port": f.port,
+                        "reference": f.reference,
                     }
                     for f in h.findings
                 ],

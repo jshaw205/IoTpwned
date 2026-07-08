@@ -43,7 +43,8 @@ devices instead of your email.
 - Expand the risky-port list and banner-grab fingerprints (more camera/DVR
   brands, more router admin-panel signatures).
 - Add a CVE-lookup step: match fingerprinted device/firmware banners against a
-  local snapshot of known CVEs for common router/camera models.
+  local snapshot of known CVEs for common router/camera models. *(shipped — see
+  `iotpwned/cve.py` and `iotpwned/cve_data.py`)*
 - Add a Wi-Fi config check (WPA2 vs WPA3, WPS enabled) per platform.
 
 ### Week 2 — trust, safety, and packaging
