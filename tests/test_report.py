@@ -1,6 +1,6 @@
-from homeguard.models import Finding, Host, OpenPort, ScanResult, Severity
-from homeguard.report import render_console, render_html
-from homeguard.risk import finalize
+from iotpwned.models import Finding, Host, OpenPort, ScanResult, Severity
+from iotpwned.report import render_console, render_html
+from iotpwned.risk import finalize
 
 
 def _sample_result():

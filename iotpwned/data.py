@@ -1,8 +1,8 @@
-"""Static knowledge base for HomeGuard.
+"""Static knowledge base for IoTpwned.
 
 Three tables live here:
 
-* ``RISKY_PORTS``    — the TCP ports HomeGuard scans, each tagged with the
+* ``RISKY_PORTS``    — the TCP ports IoTpwned scans, each tagged with the
                        service, a default severity, and plain-English why/fix
                        text used by the risk engine.
 * ``BANNER_SIGNATURES`` — regexes matched against grabbed banners to label a

@@ -1,9 +1,9 @@
-"""Command-line interface for HomeGuard.
+"""Command-line interface for IoTpwned.
 
-    homeguard                         # auto-detect subnet, scan, print report
-    homeguard --cidr 192.168.1.0/24   # scan a specific range
-    homeguard --html report.html      # also write a shareable HTML report
-    homeguard --yes-i-own-this-network  # skip the interactive consent prompt
+    iotpwned                         # auto-detect subnet, scan, print report
+    iotpwned --cidr 192.168.1.0/24   # scan a specific range
+    iotpwned --html report.html      # also write a shareable HTML report
+    iotpwned --yes-i-own-this-network  # skip the interactive consent prompt
 
 Pipeline: discovery -> port scan -> fingerprint -> risk score -> report.
 """
@@ -27,7 +27,7 @@ from .scanner import scan_hosts
 
 CONSENT_TEXT = """\
 ┌────────────────────────────────────────────────────────────────┐
-│  HomeGuard — home network security scanner                     │
+│  IoTpwned — home network security scanner                     │
 │                                                                │
 │  This tool scans the local network for exposed IoT/router      │
 │  services and explains how to fix them. Everything runs        │
@@ -35,14 +35,14 @@ CONSENT_TEXT = """\
 │                                                                │
 │  Only scan networks you OWN or have PERMISSION to test.        │
 │  Scanning other people's networks is illegal in most places.   │
-│  HomeGuard never attempts any password or login.               │
+│  IoTpwned never attempts any password or login.               │
 └────────────────────────────────────────────────────────────────┘
 """
 
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
-        prog="homeguard",
+        prog="iotpwned",
         description="Privacy-first home network IoT security scanner.",
         epilog="Only scan networks you own or have permission to test.",
     )
@@ -70,7 +70,7 @@ def build_parser() -> argparse.ArgumentParser:
                    help="Confirm you own/are authorised to scan this network "
                         "and skip the interactive consent prompt.")
     p.add_argument("--version", action="version",
-                   version=f"HomeGuard {__version__}")
+                   version=f"IoTpwned {__version__}")
     return p
 
 

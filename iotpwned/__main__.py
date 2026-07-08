@@ -1,4 +1,4 @@
-"""Enable ``python -m homeguard``."""
+"""Enable ``python -m iotpwned``."""
 
 from .cli import main
 

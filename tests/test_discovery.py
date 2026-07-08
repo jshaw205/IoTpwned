@@ -2,8 +2,8 @@ import ipaddress
 
 import pytest
 
-from homeguard import discovery
-from homeguard.discovery import default_subnet, normalise_mac
+from iotpwned import discovery
+from iotpwned.discovery import default_subnet, normalise_mac
 
 
 def test_normalise_mac_variants():

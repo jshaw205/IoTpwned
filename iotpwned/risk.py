@@ -7,7 +7,7 @@ Rules are deliberately simple and transparent (no ML, no black box):
   a device exposing an unusually large attack surface).
 * Findings are scored into a 0–100 network health number and an A–F grade.
 
-Note (ethics): HomeGuard *flags* that a default-credential-prone service is open.
+Note (ethics): IoTpwned *flags* that a default-credential-prone service is open.
 It never attempts a login. That line stays firm.
 """
 

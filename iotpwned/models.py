@@ -1,4 +1,4 @@
-"""Shared data models used across the HomeGuard pipeline.
+"""Shared data models used across the IoTpwned pipeline.
 
 Kept dependency-free (dataclasses + enum only) so every stage — discovery,
 scanning, fingerprinting, risk scoring, reporting — can import these without
@@ -75,7 +75,7 @@ class Finding:
 
 @dataclass
 class ScanResult:
-    """The full result of one HomeGuard run."""
+    """The full result of one IoTpwned run."""
 
     subnet: str
     hosts: List[Host] = field(default_factory=list)

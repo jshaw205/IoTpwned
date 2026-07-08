@@ -40,7 +40,7 @@ def lookup_vendor(mac: Optional[str]) -> Optional[str]:
     """Return a best-effort hardware vendor for ``mac``.
 
     Prefers the offline ``mac-vendor-lookup`` database; falls back to
-    HomeGuard's small built-in OUI table. Returns None if unknown.
+    IoTpwned's small built-in OUI table. Returns None if unknown.
     """
     if not mac:
         return None

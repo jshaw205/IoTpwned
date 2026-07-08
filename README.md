@@ -1,4 +1,4 @@
-# 🛡 HomeGuard
+# 🛡 IoTpwned
 
 **A free, privacy-first tool that scans your home network and tells you, in plain
 English, what's exposed and how to fix it.**
@@ -24,10 +24,10 @@ of your email. No cloud upload, no account, no data leaves your machine.
 
 ## ⚠️ Only scan networks you own
 
-HomeGuard only scans devices on the network it is run from (**your own LAN**) and
+IoTpwned only scans devices on the network it is run from (**your own LAN**) and
 **never attempts any password or login** — it only reports that a risky service is
 *open*. Scanning networks you don't own or don't have permission to test is
-**illegal in most jurisdictions**. HomeGuard asks you to confirm this before every
+**illegal in most jurisdictions**. IoTpwned asks you to confirm this before every
 scan.
 
 ---
@@ -58,23 +58,23 @@ pip install -e .
 pip install -e ".[vendor]"
 ```
 
-HomeGuard's core runs entirely on the Python standard library, so it works offline
+IoTpwned's core runs entirely on the Python standard library, so it works offline
 with zero third-party packages. The `vendor` extra only enriches device labelling.
 
 ## Usage
 
 ```bash
-homeguard                              # auto-detect subnet, scan, print report
-homeguard --cidr 192.168.1.0/24        # scan a specific range
-homeguard --html report.html           # also write a shareable HTML report card
-homeguard --json report.json           # machine-readable output
-homeguard --yes-i-own-this-network     # skip the interactive consent prompt
+iotpwned                              # auto-detect subnet, scan, print report
+iotpwned --cidr 192.168.1.0/24        # scan a specific range
+iotpwned --html report.html           # also write a shareable HTML report card
+iotpwned --json report.json           # machine-readable output
+iotpwned --yes-i-own-this-network     # skip the interactive consent prompt
 ```
 
 Or without installing:
 
 ```bash
-python -m homeguard --cidr 192.168.1.0/24
+python -m iotpwned --cidr 192.168.1.0/24
 ```
 
 ### Useful flags
@@ -106,7 +106,7 @@ Every finding deducts points from a starting score of 100, weighted by severity
 ## Project layout
 
 ```
-homeguard/
+iotpwned/
   discovery.py     # subnet detect, ping sweep, ARP parsing (no root)
   scanner.py       # threaded TCP connect scan + banner grab
   fingerprint.py   # MAC-vendor lookup + banner signature matching
@@ -119,7 +119,7 @@ tests/             # pytest unit tests for every stage
 
 **Extending coverage** (see the roadmap in [PROJECT_PLAN.md](PROJECT_PLAN.md)): add
 ports to `RISKY_PORTS`, brand signatures to `BANNER_SIGNATURES`, and MAC prefixes
-to `OUI_FALLBACK` — all in [homeguard/data.py](homeguard/data.py).
+to `OUI_FALLBACK` — all in [iotpwned/data.py](iotpwned/data.py).
 
 ## Development
 

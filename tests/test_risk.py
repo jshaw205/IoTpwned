@@ -1,5 +1,5 @@
-from homeguard.models import Host, OpenPort, ScanResult, Severity
-from homeguard.risk import (
+from iotpwned.models import Host, OpenPort, ScanResult, Severity
+from iotpwned.risk import (
     evaluate_host,
     finalize,
     grade_for_score,

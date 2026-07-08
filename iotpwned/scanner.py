@@ -1,7 +1,7 @@
 """TCP port scanning and banner grabbing.
 
 A plain threaded ``connect()`` scan — no raw sockets, no privileges. We only
-probe the curated IoT/router-risk ports from :mod:`homeguard.data`, and we grab
+probe the curated IoT/router-risk ports from :mod:`iotpwned.data`, and we grab
 a short banner from anything that answers so the fingerprinter can identify it.
 """
 
@@ -22,11 +22,11 @@ _HTTP_PORTS = {80, 81, 88, 443, 8080, 8443, 8000, 8888, 5000}
 def _probe_for(port: int) -> Optional[bytes]:
     """Return a harmless probe to elicit a banner, or None to just listen."""
     if port in _HTTP_PORTS:
-        return b"GET / HTTP/1.0\r\nHost: homeguard.local\r\nUser-Agent: HomeGuard\r\n\r\n"
+        return b"GET / HTTP/1.0\r\nHost: iotpwned.local\r\nUser-Agent: IoTpwned\r\n\r\n"
     if port in (554, 8554):  # RTSP
         return (
-            b"OPTIONS rtsp://homeguard/ RTSP/1.0\r\nCSeq: 1\r\n"
-            b"User-Agent: HomeGuard\r\n\r\n"
+            b"OPTIONS rtsp://iotpwned/ RTSP/1.0\r\nCSeq: 1\r\n"
+            b"User-Agent: IoTpwned\r\n\r\n"
         )
     return None
 

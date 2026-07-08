@@ -1,4 +1,4 @@
-# HomeGuard — Project Plan
+# IoTpwned — Project Plan
 
 ## Pitch
 
@@ -63,7 +63,7 @@ devices instead of your email.
 
 ## Legal / ethical note
 
-HomeGuard only scans devices on the network it is run from (your own LAN) and
+IoTpwned only scans devices on the network it is run from (your own LAN) and
 **never attempts authentication**. Scanning networks you don't own or don't have
 permission to test is illegal in most jurisdictions. This stays front and center
 in the README and the CLI banner.

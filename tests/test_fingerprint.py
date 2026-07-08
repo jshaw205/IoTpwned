@@ -1,10 +1,10 @@
-from homeguard.fingerprint import (
+from iotpwned.fingerprint import (
     fingerprint_host,
     label_from_banners,
     label_from_ports,
     lookup_vendor,
 )
-from homeguard.models import Host, OpenPort
+from iotpwned.models import Host, OpenPort
 
 
 def test_banner_signature_hikvision():

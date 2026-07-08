@@ -4,7 +4,7 @@ import time
 
 import pytest
 
-from homeguard.scanner import _clean_banner, scan_host, scan_port
+from iotpwned.scanner import _clean_banner, scan_host, scan_port
 
 
 class _TinyServer:

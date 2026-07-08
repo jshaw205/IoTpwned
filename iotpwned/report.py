@@ -43,7 +43,7 @@ def render_console(result: ScanResult, use_color: bool = True) -> str:
 
     add("")
     add("=" * 64)
-    add(f"  HomeGuard report — {result.subnet}")
+    add(f"  IoTpwned report — {result.subnet}")
     add(f"  {len(result.hosts)} device(s) found · scan took "
         f"{result.duration_seconds:.1f}s")
     add("=" * 64)
@@ -71,7 +71,7 @@ def render_console(result: ScanResult, use_color: bool = True) -> str:
         _render_host_console(host, add, use_color)
 
     add("=" * 64)
-    add("  HomeGuard only scanned your own LAN and never tried any password.")
+    add("  IoTpwned only scanned your own LAN and never tried any password.")
     add("  Fix the Critical and High items first. Re-run after changes.")
     add("=" * 64)
     add("")
@@ -164,7 +164,7 @@ def render_html(result: ScanResult) -> str:
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>HomeGuard report — {_e(result.subnet)}</title>
+<title>IoTpwned report — {_e(result.subnet)}</title>
 <style>
   :root {{ color-scheme: light dark; }}
   * {{ box-sizing: border-box; }}
@@ -226,7 +226,7 @@ def render_html(result: ScanResult) -> str:
 <body>
 <div class="wrap">
   <header class="card hero">
-    <div class="brand">🛡 HomeGuard</div>
+    <div class="brand">🛡 IoTpwned</div>
     <div class="grade">{_e(grade)}</div>
     <div class="score">Network health score: <strong>{result.score}/100</strong></div>
     <div class="blurb">{_e(_grade_blurb(grade))}</div>
@@ -242,7 +242,7 @@ def render_html(result: ScanResult) -> str:
   </section>
 
   <footer>
-    Generated locally by HomeGuard v{__version__}. No data left this machine.<br>
+    Generated locally by IoTpwned v{__version__}. No data left this machine.<br>
     Only scan networks you own or have permission to test.
   </footer>
 </div>
