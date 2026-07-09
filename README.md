@@ -41,9 +41,14 @@ scan.
    MQTT, exposed HTTP admin panels, and known DVR control ports).
 3. **Fingerprinting** — banner grabbing + MAC-vendor lookup to label devices
    ("Hikvision camera", "TP-Link router", "unknown IoT device").
-4. **Risk engine** — transparent, rules-based scoring. Every finding comes with a
+4. **Known-CVE lookup** — matches each fingerprinted device family against a local,
+   offline snapshot of notorious router/camera CVEs (Hikvision CVE-2021-36260,
+   Dahua CVE-2021-33044, the RomPager "Misfortune Cookie", the Mirai-exploited
+   TP-Link Archer bug, and more) and tells you to check your firmware. No NVD API
+   calls — the snapshot ships with the tool.
+5. **Risk engine** — transparent, rules-based scoring. Every finding comes with a
    plain-English *why it matters* and *how to fix it* — no jargon dump.
-5. **Report** — a console summary with an overall A–F network grade, plus an
+6. **Report** — a console summary with an overall A–F network grade, plus an
    exportable, self-contained HTML report card you can save or share.
 
 ## Install
@@ -111,6 +116,8 @@ iotpwned/
   scanner.py       # threaded TCP connect scan + banner grab
   fingerprint.py   # MAC-vendor lookup + banner signature matching
   data.py          # risky-port catalogue, signatures, OUI fallback table
+  cve_data.py      # offline snapshot of known IoT/router CVEs
+  cve.py           # match fingerprinted devices against the CVE snapshot
   risk.py          # rules-based scoring engine (why + fix per finding)
   report.py        # console + self-contained HTML rendering
   cli.py           # consent gate + pipeline orchestration
@@ -119,7 +126,8 @@ tests/             # pytest unit tests for every stage
 
 **Extending coverage** (see the roadmap in [PROJECT_PLAN.md](PROJECT_PLAN.md)): add
 ports to `RISKY_PORTS`, brand signatures to `BANNER_SIGNATURES`, and MAC prefixes
-to `OUI_FALLBACK` — all in [iotpwned/data.py](iotpwned/data.py).
+to `OUI_FALLBACK` — all in [iotpwned/data.py](iotpwned/data.py). Add known
+vulnerabilities as `CVERecord` entries in [iotpwned/cve_data.py](iotpwned/cve_data.py).
 
 ## Development
 
@@ -132,8 +140,8 @@ pytest
 
 See [PROJECT_PLAN.md](PROJECT_PLAN.md) for the full plan. Highlights:
 
-- **Week 1** — CVE lookup against a local snapshot; Wi-Fi config check (WPA2/WPA3,
-  WPS); more device fingerprints.
+- **Week 1** — ~~CVE lookup against a local snapshot~~ ✅ *shipped*; Wi-Fi config
+  check (WPA2/WPA3, WPS); more device fingerprints.
 - **Week 2** — PyInstaller single-file executables; a localhost-only Flask web UI.
 - **Week 3** — social-sized shareable report card; opt-in external-exposure check;
   landing page.
