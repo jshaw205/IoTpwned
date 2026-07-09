@@ -268,9 +268,9 @@ See [PROJECT_PLAN.md](PROJECT_PLAN.md) for the full plan. Highlights:
   check (WPA2/WPA3)~~ ✅ *shipped*; more device fingerprints.
 - **Week 2** — ~~localhost-only web UI~~ ✅ *shipped (stdlib, `--web`)*;
   ~~PyInstaller single-file executables~~ ✅ *shipped (`packaging/`)*.
-- **Week 3** — social-sized shareable report card; ~~opt-in external API lookup~~
-  ✅ *online NVD CVE lookup*; ~~opt-in external-exposure check~~ ✅ *shipped
-  (`--wan-check`)*; landing page.
+- **Week 3** — ~~opt-in external API lookup~~ ✅ *online NVD CVE lookup*;
+  ~~opt-in external-exposure check~~ ✅ *shipped (`--wan-check`)*; ~~landing page~~
+  ✅ *shipped (`docs/`)*. *(The social-sized shareable card was dropped.)*
 - **Later** — scheduled re-scans with diff reports; native GUI; mobile companion.
 
 ## Changelog

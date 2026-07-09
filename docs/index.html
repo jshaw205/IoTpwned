@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IoTpwned — find out what's exposed on your home network</title>
+<meta name="description" content="A free, privacy-first tool that scans your router, cameras, and smart devices, then grades your home network A–F in plain English. Everything runs locally.">
+<style>
+  :root {
+    --bg: #0c1310; --bg-2: #0f1815; --surface: #142019; --surface-2: #18271f;
+    --border: #24352c; --border-2: #2f4438;
+    --ink: #e9f1ec; --ink-dim: #c3d3ca; --muted: #8ba095;
+    --accent: #29c46e; --accent-2: #6ee7a2; --accent-ink: #06180d;
+    --crit: #f0555b; --high: #f7863f; --med: #f2b234; --low: #56b0e6; --good: #29c46e;
+    --grade-a: #29c46e; --grade-c: #f2b234; --grade-f: #f0555b;
+    --shadow: 0 24px 60px -24px rgba(0,0,0,.7);
+    --maxw: 1080px;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #eef2f0; --bg-2: #e7ede9; --surface: #ffffff; --surface-2: #f3f7f4;
+      --border: #dbe4de; --border-2: #c8d5cd;
+      --ink: #0d1a13; --ink-dim: #24352b; --muted: #566a5f;
+      --accent: #0f8c4a; --accent-2: #0c7a40; --accent-ink: #ffffff;
+      --crit: #d43a40; --high: #d9691f; --med: #b9810c; --low: #1f79b8; --good: #0f8c4a;
+      --grade-a: #0f8c4a; --grade-c: #b9810c; --grade-f: #d43a40;
+      --shadow: 0 24px 50px -28px rgba(20,40,30,.35);
+      color-scheme: light;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #eef2f0; --bg-2: #e7ede9; --surface: #ffffff; --surface-2: #f3f7f4;
+    --border: #dbe4de; --border-2: #c8d5cd;
+    --ink: #0d1a13; --ink-dim: #24352b; --muted: #566a5f;
+    --accent: #0f8c4a; --accent-2: #0c7a40; --accent-ink: #ffffff;
+    --crit: #d43a40; --high: #d9691f; --med: #b9810c; --low: #1f79b8; --good: #0f8c4a;
+    --grade-a: #0f8c4a; --grade-c: #b9810c; --grade-f: #d43a40;
+    --shadow: 0 24px 50px -28px rgba(20,40,30,.35);
+    color-scheme: light;
+  }
+  :root[data-theme="dark"] {
+    --bg: #0c1310; --bg-2: #0f1815; --surface: #142019; --surface-2: #18271f;
+    --border: #24352c; --border-2: #2f4438;
+    --ink: #e9f1ec; --ink-dim: #c3d3ca; --muted: #8ba095;
+    --accent: #29c46e; --accent-2: #6ee7a2; --accent-ink: #06180d;
+    --crit: #f0555b; --high: #f7863f; --med: #f2b234; --low: #56b0e6; --good: #29c46e;
+    --grade-a: #29c46e; --grade-c: #f2b234; --grade-f: #f0555b;
+    --shadow: 0 24px 60px -24px rgba(0,0,0,.7);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--sans); line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    background-image:
+      radial-gradient(60% 40% at 50% -8%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%);
+  }
+  a { color: inherit; }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+
+  /* Nav */
+  header.nav {
+    position: sticky; top: 0; z-index: 20;
+    backdrop-filter: blur(10px);
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-in { display: flex; align-items: center; gap: 16px; height: 60px; }
+  .brand { display: flex; align-items: center; gap: 9px; font-weight: 800;
+    letter-spacing: -.01em; font-size: 18px; }
+  .brand .mark { width: 26px; height: 26px; }
+  .nav-spacer { flex: 1; }
+  .nav a.link { color: var(--muted); text-decoration: none; font-size: 14px;
+    font-weight: 600; padding: 6px 4px; }
+  .nav a.link:hover { color: var(--ink); }
+  @media (max-width: 720px) { .nav a.link { display: none; } }
+  .theme-btn {
+    background: var(--surface-2); border: 1px solid var(--border); color: var(--ink);
+    width: 36px; height: 36px; border-radius: 9px; cursor: pointer; font-size: 15px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .theme-btn:hover { border-color: var(--border-2); }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px; justify-content: center;
+    font-family: var(--sans); font-weight: 700; font-size: 15px;
+    padding: 12px 20px; border-radius: 11px; text-decoration: none;
+    border: 1px solid transparent; cursor: pointer; transition: transform .12s ease;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); }
+  .btn-primary:hover { background: var(--accent-2); }
+  .btn-ghost { background: transparent; color: var(--ink); border-color: var(--border-2); }
+  .btn-ghost:hover { background: var(--surface); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+
+  /* Hero */
+  .hero { padding: 72px 0 40px; text-align: center; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 12.5px; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--accent);
+    display: inline-flex; gap: 10px; align-items: center;
+    border: 1px solid var(--border); background: var(--surface);
+    padding: 6px 12px; border-radius: 999px; margin-bottom: 22px;
+  }
+  .eyebrow .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent);
+    animation: pulse 2.4s infinite; }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
+    70% { box-shadow: 0 0 0 8px transparent; } 100% { box-shadow: 0 0 0 0 transparent; }
+  }
+  h1 {
+    font-size: clamp(34px, 6vw, 60px); line-height: 1.04; letter-spacing: -.03em;
+    font-weight: 850; margin: 0 auto 18px; max-width: 16ch; text-wrap: balance;
+  }
+  h1 .hl { color: var(--accent); }
+  .lede { font-size: clamp(17px, 2.3vw, 20px); color: var(--ink-dim);
+    max-width: 62ch; margin: 0 auto 12px; text-wrap: pretty; }
+  .compare { color: var(--muted); font-size: 15px; margin: 0 auto 30px; }
+  .compare code { font-family: var(--mono); color: var(--ink); }
+  .cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .cta-note { margin-top: 14px; color: var(--muted); font-size: 13px; font-family: var(--mono); }
+
+  /* Terminal showpiece */
+  .stage { padding: 24px 0 8px; }
+  .terminal {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    box-shadow: var(--shadow); overflow: hidden; max-width: 760px; margin: 0 auto;
+    text-align: left;
+  }
+  .term-bar { display: flex; align-items: center; gap: 8px; padding: 11px 14px;
+    background: var(--surface-2); border-bottom: 1px solid var(--border); }
+  .tl { width: 12px; height: 12px; border-radius: 50%; background: #48524c; }
+  .tl.r { background: #f0555b; } .tl.y { background: #f2b234; } .tl.g { background: #29c46e; }
+  .term-title { font-family: var(--mono); font-size: 12.5px; color: var(--muted);
+    margin-left: 8px; }
+  .term-body { padding: 18px 20px 22px; font-family: var(--mono); font-size: 13.5px;
+    line-height: 1.7; overflow-x: auto; }
+  .term-body .cmd { color: var(--ink); }
+  .term-body .mut { color: var(--muted); }
+  .prompt { color: var(--accent); }
+  .cursor { display: inline-block; width: 8px; height: 15px; vertical-align: -2px;
+    background: var(--accent); margin-left: 2px; animation: blink 1.1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .cursor { animation: none; } .dot { animation: none; } }
+  .grade-line { display: flex; align-items: center; gap: 14px; margin: 8px 0 4px;
+    padding: 12px 0; border-top: 1px dashed var(--border-2); border-bottom: 1px dashed var(--border-2); }
+  .grade-badge { width: 46px; height: 46px; border-radius: 10px; display: grid;
+    place-items: center; font-weight: 850; font-size: 26px; color: #fff; flex: none; }
+  .g-c { background: var(--grade-c); color: #241a02; }
+  .grade-meta .g-score { font-weight: 700; color: var(--ink); }
+  .grade-meta .g-sub { color: var(--muted); font-size: 12.5px; }
+  .finding { margin-top: 12px; }
+  .sev { font-family: var(--mono); font-size: 11px; font-weight: 700; color: #fff;
+    padding: 2px 7px; border-radius: 5px; letter-spacing: .04em; }
+  .sev.crit { background: var(--crit); } .sev.high { background: var(--high); color: #1c0d02; }
+  .sev.med { background: var(--med); color: #241a02; } .sev.ok { background: var(--good); color: var(--accent-ink); }
+  .finding .ft { color: var(--ink); }
+  .finding .fx { color: var(--muted); display: block; padding-left: 2px; }
+  .finding .fx b { color: var(--accent); font-weight: 700; }
+
+  /* Sections */
+  section { padding: 60px 0; }
+  .section-head { max-width: 60ch; margin-bottom: 34px; }
+  .kicker { font-family: var(--mono); font-size: 12.5px; letter-spacing: .09em;
+    text-transform: uppercase; color: var(--accent); margin: 0 0 10px; }
+  h2 { font-size: clamp(26px, 4vw, 38px); letter-spacing: -.02em; line-height: 1.1;
+    margin: 0 0 12px; font-weight: 820; text-wrap: balance; }
+  .section-head p { color: var(--ink-dim); font-size: 17px; margin: 0; }
+
+  /* Hook band */
+  .hook { background: var(--bg-2); border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border); }
+  .hook h2 { max-width: 20ch; }
+  .hook .big { font-size: clamp(24px, 3.6vw, 34px); }
+  .hook p { max-width: 60ch; color: var(--ink-dim); font-size: 17px; }
+
+  /* Checks grid */
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+  .check {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 20px 20px 22px;
+  }
+  .check h3 { margin: 0 0 6px; font-size: 17px; letter-spacing: -.01em; }
+  .check p { margin: 0; color: var(--muted); font-size: 14.5px; }
+  .check .tag { font-family: var(--mono); font-size: 11px; letter-spacing: .04em;
+    padding: 2px 7px; border-radius: 5px; border: 1px solid var(--border-2);
+    color: var(--muted); margin-left: 8px; vertical-align: 2px; }
+  .check .tag.local { color: var(--good); border-color: color-mix(in srgb, var(--good) 45%, var(--border)); }
+  .check .tag.optin { color: var(--low); border-color: color-mix(in srgb, var(--low) 45%, var(--border)); }
+  .check .ico { font-family: var(--mono); color: var(--accent); font-size: 13px; }
+
+  /* Steps */
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; counter-reset: s; }
+  @media (max-width: 720px) { .steps { grid-template-columns: 1fr; } }
+  .step { border-top: 2px solid var(--accent); padding-top: 16px; }
+  .step .n { font-family: var(--mono); color: var(--accent); font-weight: 700;
+    font-size: 13px; letter-spacing: .05em; }
+  .step h3 { margin: 6px 0 6px; font-size: 18px; }
+  .step p { margin: 0; color: var(--muted); font-size: 14.5px; }
+  .step code { font-family: var(--mono); background: var(--surface); border: 1px solid var(--border);
+    padding: 1px 6px; border-radius: 6px; font-size: 13px; color: var(--ink); }
+
+  /* Privacy strip */
+  .privacy { background: var(--surface); border: 1px solid var(--border); border-radius: 18px;
+    padding: 30px; display: grid; grid-template-columns: 1.1fr 1fr; gap: 30px; align-items: center; }
+  @media (max-width: 760px) { .privacy { grid-template-columns: 1fr; } }
+  .privacy ul { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 12px; }
+  .privacy li { display: flex; gap: 11px; font-size: 15px; color: var(--ink-dim); }
+  .privacy li .ck { color: var(--accent); font-family: var(--mono); font-weight: 700; flex: none; }
+
+  /* Download */
+  .dl { text-align: center; }
+  .os-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin: 8px 0 22px; }
+  .os {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 18px 26px; text-decoration: none; min-width: 190px; transition: border-color .12s, transform .12s;
+  }
+  .os:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .os .os-name { font-weight: 700; font-size: 16px; }
+  .os .os-file { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .altrun { font-family: var(--mono); font-size: 13.5px; color: var(--ink-dim);
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 18px; display: inline-block; text-align: left; overflow-x: auto; max-width: 100%; }
+  .altrun .c { color: var(--accent); }
+
+  /* Callout */
+  .callout { border: 1px solid color-mix(in srgb, var(--med) 40%, var(--border));
+    background: color-mix(in srgb, var(--med) 8%, var(--surface));
+    border-radius: 14px; padding: 18px 20px; font-size: 14.5px; color: var(--ink-dim);
+    max-width: 70ch; margin: 0 auto; }
+  .callout b { color: var(--ink); }
+
+  /* Footer */
+  footer { border-top: 1px solid var(--border); padding: 34px 0 50px; color: var(--muted);
+    font-size: 14px; }
+  .foot-in { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: center; }
+  footer a { color: var(--ink-dim); text-decoration: none; }
+  footer a:hover { color: var(--accent); }
+  .foot-links { display: flex; gap: 18px; flex-wrap: wrap; }
+
+  .reveal { opacity: 0; transform: translateY(14px); transition: opacity .6s ease, transform .6s ease; }
+  .reveal.in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="#top" style="text-decoration:none">
+      <svg class="mark" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 2.5 4 5.2v6.3c0 4.7 3.2 8.2 8 10 4.8-1.8 8-5.3 8-10V5.2L12 2.5Z"
+          fill="color-mix(in srgb, var(--accent) 22%, transparent)" stroke="var(--accent)" stroke-width="1.5"/>
+        <path d="m8.4 12.2 2.6 2.5 4.6-5" stroke="var(--accent)" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      IoTpwned
+    </a>
+    <div class="nav-spacer"></div>
+    <a class="link" href="#checks">What it checks</a>
+    <a class="link" href="#how">How it works</a>
+    <a class="link" href="#download">Download</a>
+    <a class="link" href="https://github.com/jshaw205/IoTpwned">GitHub</a>
+    <button class="theme-btn" id="themeBtn" aria-label="Toggle colour theme" title="Toggle theme">◐</button>
+  </div>
+</header>
+
+<a id="top"></a>
+<div class="hero wrap">
+  <span class="eyebrow"><span class="dot"></span> Free · runs locally · no account</span>
+  <h1>Find out what's <span class="hl">exposed</span> on your home network.</h1>
+  <p class="lede">IoTpwned scans your router, cameras, and smart devices for the ways they get
+    hacked — then grades your whole network A–F with plain-English fixes.</p>
+  <p class="compare">Like <em>Have I Been Pwned</em>, but for your devices instead of your email.
+    No cloud, no upload — everything stays on your machine.</p>
+  <div class="cta-row">
+    <a class="btn btn-primary" href="#download">Download for free</a>
+    <a class="btn btn-ghost" href="https://github.com/jshaw205/IoTpwned">View on GitHub →</a>
+  </div>
+  <p class="cta-note">Windows · macOS · Linux — one file, no install</p>
+</div>
+
+<div class="stage wrap">
+  <div class="terminal reveal">
+    <div class="term-bar">
+      <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
+      <span class="term-title">iotpwned — home network scan</span>
+    </div>
+    <div class="term-body">
+      <div><span class="prompt">$</span> <span class="cmd">iotpwned</span></div>
+      <div class="mut">Scanning 192.168.1.0/24 …  14 devices found</div>
+      <div class="grade-line">
+        <div class="grade-badge g-c">C</div>
+        <div class="grade-meta">
+          <div class="g-score">Network grade: C &nbsp;·&nbsp; health 82/100</div>
+          <div class="g-sub">Some real exposure here — worth 20 minutes of fixes.</div>
+        </div>
+      </div>
+      <div class="finding">
+        <span class="sev crit">CRITICAL</span>
+        <span class="ft"> Telnet exposed on your Hikvision camera (port 23)</span>
+        <span class="fx"><b>Fix:</b> disable Telnet in the device settings — it's the exact door the Mirai botnet walks through.</span>
+      </div>
+      <div class="finding">
+        <span class="sev high">HIGH</span>
+        <span class="ft"> Router admin panel reachable from the internet (port 7547)</span>
+        <span class="fx"><b>Fix:</b> update the router firmware and turn off remote management.</span>
+      </div>
+      <div class="finding">
+        <span class="sev ok">OK ✓</span>
+        <span class="ft"> Wi-Fi is using WPA3 — the strongest option.</span>
+      </div>
+      <div style="margin-top:14px" class="mut">Report saved · no data left this machine.<span class="cursor"></span></div>
+    </div>
+  </div>
+</div>
+
+<section class="hook">
+  <div class="wrap reveal">
+    <p class="kicker">Why it matters</p>
+    <h2 class="big">Is your baby monitor letting strangers watch back?</h2>
+    <p>Cheap cameras, doorbells, and routers ship with forgotten default passwords and services
+      switched on by default. Botnets scan the whole internet for them around the clock. Most
+      people never find out they're exposed — until IoTpwned tells them, in words that actually
+      make sense, and exactly what to change.</p>
+  </div>
+</section>
+
+<section id="checks">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <p class="kicker">What it checks</p>
+      <h2>Six checks, one plain-English grade.</h2>
+      <p>Every finding comes with why it matters and how to fix it — no jargon dump, no scare tactics.</p>
+    </div>
+    <div class="grid">
+      <div class="check reveal">
+        <h3><span class="ico">▸</span> Exposed devices &amp; ports <span class="tag local">local</span></h3>
+        <p>Finds every device on your network and the risky services they're running — Telnet, VNC,
+          RDP, exposed camera and router admin panels.</p>
+      </div>
+      <div class="check reveal">
+        <h3><span class="ico">▸</span> Device fingerprinting <span class="tag local">local</span></h3>
+        <p>Labels what each device actually is — "Hikvision camera", "TP-Link router" — from its
+          network fingerprint, so the advice is specific.</p>
+      </div>
+      <div class="check reveal">
+        <h3><span class="ico">▸</span> Known vulnerabilities <span class="tag optin">+ opt-in online</span></h3>
+        <p>Matches your devices against a built-in list of notorious router/camera CVEs, offline. Opt
+          in to also query the live NIST database.</p>
+      </div>
+      <div class="check reveal">
+        <h3><span class="ico">▸</span> Wi-Fi encryption <span class="tag local">local</span></h3>
+        <p>Reads your current Wi-Fi and flags weak encryption (Open, WEP, old WPA), nudging you toward
+          WPA2/WPA3.</p>
+      </div>
+      <div class="check reveal">
+        <h3><span class="ico">▸</span> Internet exposure <span class="tag optin">opt-in</span></h3>
+        <p>Checks what's reachable from the <em>outside</em> on your public IP via Shodan — the
+          port-forward you forgot you set up.</p>
+      </div>
+      <div class="check reveal">
+        <h3><span class="ico">▸</span> An A–F network grade <span class="tag local">local</span></h3>
+        <p>Everything rolls up into one score you can act on — and re-run after you've made changes to
+          watch it climb.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <p class="kicker">How it works</p>
+      <h2>From download to graded in under a minute.</h2>
+    </div>
+    <div class="steps">
+      <div class="step reveal">
+        <div class="n">STEP 1</div>
+        <h3>Run it</h3>
+        <p>Download the one-file app and open it, or <code>pip install</code> it. No dependencies,
+          no sign-up.</p>
+      </div>
+      <div class="step reveal">
+        <div class="n">STEP 2</div>
+        <h3>Confirm &amp; scan</h3>
+        <p>Tick "I own this network", press <b>Scan</b>. IoTpwned never tries a password — it only
+          checks what's open.</p>
+      </div>
+      <div class="step reveal">
+        <div class="n">STEP 3</div>
+        <h3>Get your grade</h3>
+        <p>Read your A–F report card in the terminal or your browser, and work down the fixes.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="privacy reveal">
+      <div>
+        <p class="kicker">Privacy-first, by design</p>
+        <h2 style="margin-bottom:8px">Nothing leaves your machine.</h2>
+        <p style="color:var(--ink-dim); margin:0; max-width:46ch">It's a security tool — so it holds
+          itself to the standard it checks for. The scan is entirely local.</p>
+      </div>
+      <ul>
+        <li><span class="ck">✓</span> No cloud, no account, no telemetry — the code is open source.</li>
+        <li><span class="ck">✓</span> It never attempts a login or password, even on your own devices.</li>
+        <li><span class="ck">✓</span> The two online checks are strictly opt-in, ask first, and send only
+          a device brand name or your public IP — never your data.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="download" class="dl">
+  <div class="wrap">
+    <div class="section-head reveal" style="margin-left:auto;margin-right:auto;text-align:center">
+      <p class="kicker" style="text-align:center">Download</p>
+      <h2>Get IoTpwned — free.</h2>
+      <p>Grab the single-file app for your system. Opening it launches the point-and-click web UI.</p>
+    </div>
+    <div class="os-row reveal">
+      <a class="os" href="https://github.com/jshaw205/IoTpwned/releases/latest/download/iotpwned-windows-x64.exe">
+        <span class="os-name">Windows</span>
+        <span class="os-file">iotpwned-windows-x64.exe</span>
+      </a>
+      <a class="os" href="https://github.com/jshaw205/IoTpwned/releases/latest/download/iotpwned-macos-arm64">
+        <span class="os-name">macOS</span>
+        <span class="os-file">iotpwned-macos-arm64</span>
+      </a>
+      <a class="os" href="https://github.com/jshaw205/IoTpwned/releases/latest/download/iotpwned-linux-x64">
+        <span class="os-name">Linux</span>
+        <span class="os-file">iotpwned-linux-x64</span>
+      </a>
+    </div>
+    <p style="color:var(--muted); font-size:14px; margin:0 0 22px">
+      Prefer Python? <span class="altrun"><span class="c">pip install</span> iotpwned &nbsp;&amp;&amp;&nbsp; iotpwned <span class="c">--web</span></span>
+    </p>
+    <p class="callout"><b>Only scan networks you own</b> or have permission to test. Scanning other
+      people's networks is illegal in most places — IoTpwned asks you to confirm before every scan.
+      Unsigned builds may trigger a first-launch warning on Windows/macOS.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot-in">
+    <div>IoTpwned · MIT-licensed · built for people, not just security pros.</div>
+    <div class="foot-links">
+      <a href="https://github.com/jshaw205/IoTpwned">GitHub</a>
+      <a href="https://github.com/jshaw205/IoTpwned/releases/latest">Releases</a>
+      <a href="https://github.com/jshaw205/IoTpwned/blob/main/CHANGELOG.md">Changelog</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    // Theme toggle — persists choice, otherwise follows the OS.
+    var root = document.documentElement, key = "iotpwned-theme";
+    try {
+      var saved = localStorage.getItem(key);
+      if (saved) root.setAttribute("data-theme", saved);
+    } catch (e) {}
+    document.getElementById("themeBtn").addEventListener("click", function () {
+      var cur = root.getAttribute("data-theme");
+      if (!cur) {
+        cur = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      }
+      var next = cur === "dark" ? "light" : "dark";
+      root.setAttribute("data-theme", next);
+      try { localStorage.setItem(key, next); } catch (e) {}
+    });
+
+    // Reveal on scroll.
+    var els = document.querySelectorAll(".reveal");
+    if (!("IntersectionObserver" in window) ||
+        matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      els.forEach(function (el) { el.classList.add("in"); });
+    } else {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); }
+        });
+      }, { threshold: 0.12 });
+      els.forEach(function (el) { io.observe(el); });
+    }
+  })();
+</script>
+</body>
+</html>
