@@ -3,6 +3,8 @@
 **A free, privacy-first tool that scans your home network and tells you, in plain
 English, what's exposed and how to fix it.**
 
+[![Build & Release](https://github.com/jshaw205/IoTpwned/actions/workflows/build-and-release.yml/badge.svg)](https://github.com/jshaw205/IoTpwned/actions/workflows/build-and-release.yml)
+
 Think *Have I Been Pwned*, but for your router, cameras, and smart devices instead
 of your email. No cloud upload, no account, no data leaves your machine.
 
@@ -201,6 +203,19 @@ still zero-network by default. **PyInstaller can't cross-compile**, so run the
 build on each OS you want a binary for — Windows on Windows, macOS on macOS,
 Linux on Linux. See [packaging/README.md](packaging/README.md) for details and
 the per-OS notes.
+
+### Automated release builds
+
+A GitHub Actions matrix
+([`.github/workflows/build-and-release.yml`](.github/workflows/build-and-release.yml))
+runs the tests and a PyInstaller build on Linux, macOS, and Windows for every
+push and pull request. Pushing a version tag builds all three and attaches them
+to a GitHub Release automatically:
+
+```bash
+git tag v0.6.0
+git push origin v0.6.0     # -> Release with iotpwned-linux-x64, -macos-arm64, -windows-x64.exe
+```
 
 ## Development
 
