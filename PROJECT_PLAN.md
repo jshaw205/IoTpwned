@@ -65,11 +65,12 @@ devices instead of your email.
   uses a per-session CSRF token.)*
 
 ### Week 3 — distribution and growth loop
-- Shareable HTML/image report card sized for social.
+- ~~Shareable HTML/image report card sized for social.~~ *(dropped — not wanted.)*
 - Optional, opt-in external-exposure check via a public API. *(shipped — see
   `iotpwned/wan.py` and `--wan-check`. Uses Shodan's free InternetDB; sends only
   the public IP, consent-gated, masked in shareable output.)*
 - Landing page + install script; submit to r/homelab, r/HomeNetworking, Product Hunt.
+  *(landing page shipped — see `docs/index.html`.)*
 
 ### Later
 - Scheduled re-scans with diff reports ("a new device joined your network").
