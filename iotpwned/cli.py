@@ -19,12 +19,12 @@ from typing import List, Optional
 
 import os
 
-from . import __version__, cve_online
+from . import __version__, cve_online, wifi
 from .discovery import default_subnet, discover_hosts
 from .fingerprint import fingerprint_hosts
 from .models import ScanResult
 from .report import render_console, render_html
-from .risk import finalize, score_and_grade
+from .risk import finalize, rescore
 from .scanner import scan_hosts
 
 CONSENT_TEXT = """\
@@ -63,6 +63,8 @@ def build_parser() -> argparse.ArgumentParser:
                    help="Skip the ping sweep; use only the existing ARP cache.")
     p.add_argument("--no-resolve", action="store_true",
                    help="Skip reverse-DNS hostname lookups (faster).")
+    p.add_argument("--no-wifi", action="store_true",
+                   help="Skip the local Wi-Fi encryption check.")
     p.add_argument("--ports", metavar="LIST",
                    help="Comma-separated ports to scan instead of the "
                         "built-in risky-port list.")
@@ -157,7 +159,7 @@ def _maybe_online_cve(result: ScanResult, args: argparse.Namespace) -> None:
         progress=_progress("NVD lookup"),
     )
     # Findings changed, so the score/grade must be recomputed.
-    result.score, result.grade = score_and_grade(result.hosts)
+    rescore(result)
     print(f"  Online CVE lookup added {added} finding(s).")
 
 
@@ -225,8 +227,26 @@ def run_scan(args: argparse.Namespace) -> ScanResult:
         finished_at=datetime.datetime.now().isoformat(timespec="seconds"),
         duration_seconds=time.time() - started,
     )
+
+    if not args.no_wifi:
+        info, wifi_findings = wifi.check_wifi()
+        result.wifi = info
+        result.network_findings.extend(wifi_findings)
+
     finalize(result)
     return result
+
+
+def _finding_json(f) -> dict:
+    return {
+        "rule_id": f.rule_id,
+        "title": f.title,
+        "severity": f.severity.label,
+        "why": f.why,
+        "fix": f.fix,
+        "port": f.port,
+        "reference": f.reference,
+    }
 
 
 def _write_json(result: ScanResult, path: str) -> None:
@@ -237,6 +257,19 @@ def _write_json(result: ScanResult, path: str) -> None:
         "started_at": result.started_at,
         "finished_at": result.finished_at,
         "duration_seconds": round(result.duration_seconds, 2),
+        "wifi": (
+            {
+                "supported": result.wifi.supported,
+                "connected": result.wifi.connected,
+                "ssid": result.wifi.ssid,
+                "authentication": result.wifi.authentication,
+                "category": result.wifi.category,
+                "band": result.wifi.band,
+                "platform": result.wifi.platform,
+            }
+            if result.wifi is not None else None
+        ),
+        "network_findings": [_finding_json(f) for f in result.network_findings],
         "hosts": [
             {
                 "ip": h.ip,
@@ -249,18 +282,7 @@ def _write_json(result: ScanResult, path: str) -> None:
                     {"port": op.port, "service": op.service, "banner": op.banner}
                     for op in h.open_ports
                 ],
-                "findings": [
-                    {
-                        "rule_id": f.rule_id,
-                        "title": f.title,
-                        "severity": f.severity.label,
-                        "why": f.why,
-                        "fix": f.fix,
-                        "port": f.port,
-                        "reference": f.reference,
-                    }
-                    for f in h.findings
-                ],
+                "findings": [_finding_json(f) for f in h.findings],
             }
             for h in result.hosts
         ],

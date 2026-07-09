@@ -75,6 +75,20 @@ class Finding:
 
 
 @dataclass
+class WifiInfo:
+    """The local machine's current Wi-Fi connection, as read from the OS."""
+
+    supported: bool = True   # False if we couldn't read Wi-Fi on this platform
+    connected: bool = False
+    ssid: Optional[str] = None
+    authentication: Optional[str] = None  # raw string from the OS
+    cipher: Optional[str] = None
+    category: str = "unknown"  # open/wep/wpa/wpa2/wpa2-enterprise/wpa3/unknown
+    band: Optional[str] = None
+    platform: str = ""
+
+
+@dataclass
 class ScanResult:
     """The full result of one IoTpwned run."""
 
@@ -86,10 +100,15 @@ class ScanResult:
     grade: str = "?"
     score: int = 100
     meta: Dict[str, str] = field(default_factory=dict)
+    # Findings about the network/machine itself rather than a specific host
+    # (e.g. weak Wi-Fi encryption). These count toward the grade too.
+    network_findings: List[Finding] = field(default_factory=list)
+    wifi: Optional[WifiInfo] = None
 
     @property
     def all_findings(self) -> List[Finding]:
         out: List[Finding] = []
         for h in self.hosts:
             out.extend(h.findings)
+        out.extend(self.network_findings)
         return out
