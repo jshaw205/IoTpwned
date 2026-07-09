@@ -236,6 +236,10 @@ See [PROJECT_PLAN.md](PROJECT_PLAN.md) for the full plan. Highlights:
   ✅ *online NVD CVE lookup shipped*; opt-in external-exposure check; landing page.
 - **Later** — scheduled re-scans with diff reports; native GUI; mobile companion.
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for the release history.
+
 ## License
 
 MIT.
