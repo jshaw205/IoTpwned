@@ -45,6 +45,9 @@ devices instead of your email.
 - Add a CVE-lookup step: match fingerprinted device/firmware banners against a
   local snapshot of known CVEs for common router/camera models. *(shipped — see
   `iotpwned/cve.py` and `iotpwned/cve_data.py`)*
+- Optional online CVE lookup against the live NIST NVD API — opt-in and
+  consent-gated, sends only recognised brand keywords. *(shipped — see
+  `iotpwned/cve_online.py` and `--online-cve`)*
 - Add a Wi-Fi config check (WPA2 vs WPA3, WPS enabled) per platform.
 
 ### Week 2 — trust, safety, and packaging

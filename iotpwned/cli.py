@@ -17,12 +17,14 @@ import sys
 import time
 from typing import List, Optional
 
-from . import __version__
+import os
+
+from . import __version__, cve_online
 from .discovery import default_subnet, discover_hosts
 from .fingerprint import fingerprint_hosts
 from .models import ScanResult
 from .report import render_console, render_html
-from .risk import finalize
+from .risk import finalize, score_and_grade
 from .scanner import scan_hosts
 
 CONSENT_TEXT = """\
@@ -69,6 +71,20 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--yes-i-own-this-network", action="store_true",
                    help="Confirm you own/are authorised to scan this network "
                         "and skip the interactive consent prompt.")
+    p.add_argument("--online-cve", action="store_true",
+                   help="Also look up known CVEs for detected device brands "
+                        "against the online NIST NVD API. OFF by default and "
+                        "asks for consent first, since it sends brand names "
+                        "(only) over the internet.")
+    p.add_argument("--yes-online-cve", action="store_true",
+                   help="Pre-consent to the online CVE lookup (implies "
+                        "--online-cve) and skip its interactive prompt.")
+    p.add_argument("--online-cve-limit", type=int, default=5, metavar="N",
+                   help="Max CVEs to report per device brand from the online "
+                        "lookup (default 5).")
+    p.add_argument("--nvd-api-key", metavar="KEY", default=None,
+                   help="Optional NVD API key for a higher rate limit "
+                        "(falls back to the NVD_API_KEY environment variable).")
     p.add_argument("--version", action="version",
                    version=f"IoTpwned {__version__}")
     return p
@@ -89,6 +105,60 @@ def _confirm_consent(assume_yes: bool) -> bool:
         print()
         return False
     return answer.strip().lower() in ("y", "yes")
+
+
+def _confirm_online_consent(keywords: List[str], assume_yes: bool) -> bool:
+    """Second, separate consent gate specifically for the online API call.
+
+    Shows exactly which brand keywords would be sent, and to where, before
+    anything leaves the machine.
+    """
+    kw = ", ".join(keywords)
+    print()
+    print("  ── Online CVE lookup ─────────────────────────────────────────")
+    print("  This will contact the NIST NVD API (services.nvd.nist.gov) and")
+    print("  send ONLY these device brand keywords:")
+    print(f"      {kw}")
+    print("  No IP addresses, MAC addresses, hostnames, or banners are sent.")
+    print("  ──────────────────────────────────────────────────────────────")
+    if assume_yes:
+        print("  Consent confirmed via --yes-online-cve.\n")
+        return True
+    if not sys.stdin.isatty():
+        print("  Skipping online lookup: no terminal to confirm consent. "
+              "Re-run with --yes-online-cve to allow it.\n")
+        return False
+    try:
+        answer = input("  Send these brand keywords to the NVD API? [y/N] ")
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return False
+    return answer.strip().lower() in ("y", "yes")
+
+
+def _maybe_online_cve(result: ScanResult, args: argparse.Namespace) -> None:
+    """If enabled and consented, enrich findings from the online NVD API."""
+    if not (args.online_cve or args.yes_online_cve):
+        return
+
+    keyword_map = cve_online.derive_keywords(result.hosts)
+    if not keyword_map:
+        print("\n  Online CVE lookup: no recognised device brands to look up.")
+        return
+
+    if not _confirm_online_consent(list(keyword_map), args.yes_online_cve):
+        return
+
+    api_key = args.nvd_api_key or os.environ.get("NVD_API_KEY")
+    added = cve_online.enrich(
+        keyword_map,
+        limit=args.online_cve_limit,
+        api_key=api_key,
+        progress=_progress("NVD lookup"),
+    )
+    # Findings changed, so the score/grade must be recomputed.
+    result.score, result.grade = score_and_grade(result.hosts)
+    print(f"  Online CVE lookup added {added} finding(s).")
 
 
 def _parse_ports(spec: Optional[str]) -> Optional[List[int]]:
@@ -226,6 +296,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     try:
         result = run_scan(args)
+        _maybe_online_cve(result, args)
     except KeyboardInterrupt:
         print("\nInterrupted.")
         return 130
