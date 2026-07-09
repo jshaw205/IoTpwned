@@ -56,7 +56,10 @@ devices instead of your email.
 ### Week 2 — trust, safety, and packaging
 - Explicit consent screen + `--yes-i-own-this-network` flag pattern. *(shipped in MVP)*
 - Package as a single executable per OS (PyInstaller).
-- Simple local web UI (Flask, localhost-only).
+- Simple local web UI (localhost-only). *(shipped — see `iotpwned/webui.py` and
+  `--web`. Built on the stdlib `http.server` rather than Flask to preserve the
+  zero-dependency install; binds to 127.0.0.1, validates the Host header, and
+  uses a per-session CSRF token.)*
 
 ### Week 3 — distribution and growth loop
 - Shareable HTML/image report card sized for social.
