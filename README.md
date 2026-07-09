@@ -185,6 +185,23 @@ ports to `RISKY_PORTS`, brand signatures to `BANNER_SIGNATURES`, and MAC prefixe
 to `OUI_FALLBACK` — all in [iotpwned/data.py](iotpwned/data.py). Add known
 vulnerabilities as `CVERecord` entries in [iotpwned/cve_data.py](iotpwned/cve_data.py).
 
+## Standalone executable
+
+For non-technical users who don't have Python, IoTpwned can be frozen into a
+single double-clickable executable with [PyInstaller](https://pyinstaller.org):
+
+```bash
+pip install -e ".[build]"
+python packaging/build.py --clean
+# -> dist/iotpwned  (dist/iotpwned.exe on Windows), a single ~8 MB file
+```
+
+The binary is fully self-contained (no Python needed on the target machine) and
+still zero-network by default. **PyInstaller can't cross-compile**, so run the
+build on each OS you want a binary for — Windows on Windows, macOS on macOS,
+Linux on Linux. See [packaging/README.md](packaging/README.md) for details and
+the per-OS notes.
+
 ## Development
 
 ```bash
@@ -198,8 +215,8 @@ See [PROJECT_PLAN.md](PROJECT_PLAN.md) for the full plan. Highlights:
 
 - **Week 1** — ~~CVE lookup against a local snapshot~~ ✅ *shipped*; ~~Wi-Fi config
   check (WPA2/WPA3)~~ ✅ *shipped*; more device fingerprints.
-- **Week 2** — ~~localhost-only web UI~~ ✅ *shipped (stdlib, `--web`)*; PyInstaller
-  single-file executables.
+- **Week 2** — ~~localhost-only web UI~~ ✅ *shipped (stdlib, `--web`)*;
+  ~~PyInstaller single-file executables~~ ✅ *shipped (`packaging/`)*.
 - **Week 3** — social-sized shareable report card; ~~opt-in external API lookup~~
   ✅ *online NVD CVE lookup shipped*; opt-in external-exposure check; landing page.
 - **Later** — scheduled re-scans with diff reports; native GUI; mobile companion.

@@ -55,7 +55,10 @@ devices instead of your email.
 
 ### Week 2 — trust, safety, and packaging
 - Explicit consent screen + `--yes-i-own-this-network` flag pattern. *(shipped in MVP)*
-- Package as a single executable per OS (PyInstaller).
+- Package as a single executable per OS (PyInstaller). *(shipped — see
+  `iotpwned.spec`, `packaging/build.py`, and `packaging/README.md`. Verified on
+  Windows; macOS/Linux binaries build the same way on those OSes since
+  PyInstaller can't cross-compile.)*
 - Simple local web UI (localhost-only). *(shipped — see `iotpwned/webui.py` and
   `--web`. Built on the stdlib `http.server` rather than Flask to preserve the
   zero-dependency install; binds to 127.0.0.1, validates the Host header, and

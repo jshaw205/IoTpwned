@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "iotpwned"
-version = "0.5.0"
+version = "0.6.0"
 description = "Privacy-first home network IoT security scanner — Have I Been Pwned, but for your router and smart devices."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -27,6 +27,7 @@ dependencies = []
 [project.optional-dependencies]
 vendor = ["mac-vendor-lookup>=0.1.12"]
 dev = ["pytest>=7"]
+build = ["pyinstaller>=6"]
 
 [project.scripts]
 iotpwned = "iotpwned.cli:main"
