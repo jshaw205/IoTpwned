@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _Nothing yet._
 
+## [0.6.1] - 2026-07-09
+
+### Fixed
+- The prebuilt executables now open the local **web UI** when launched with no
+  arguments (e.g. double-clicked), instead of dropping into the terminal CLI.
+  Passing any CLI flag still runs the command-line interface. Only the frozen
+  binary's default changed; the `iotpwned` pip console script is unchanged.
+
 ## [0.6.0] - 2026-07-09
 
 First tagged release. Prebuilt, self-contained executables for Linux, macOS, and
@@ -53,5 +61,6 @@ Windows are attached to the [GitHub Release](https://github.com/jshaw205/IoTpwne
 - The only feature that ever contacts the internet is the opt-in `--online-cve`
   lookup, and it transmits only device brand keywords.
 
-[Unreleased]: https://github.com/jshaw205/IoTpwned/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/jshaw205/IoTpwned/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/jshaw205/IoTpwned/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/jshaw205/IoTpwned/releases/tag/v0.6.0
