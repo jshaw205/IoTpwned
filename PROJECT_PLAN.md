@@ -48,7 +48,10 @@ devices instead of your email.
 - Optional online CVE lookup against the live NIST NVD API — opt-in and
   consent-gated, sends only recognised brand keywords. *(shipped — see
   `iotpwned/cve_online.py` and `--online-cve`)*
-- Add a Wi-Fi config check (WPA2 vs WPA3, WPS enabled) per platform.
+- Add a Wi-Fi config check (WPA2 vs WPA3, WPS enabled) per platform. *(shipped —
+  see `iotpwned/wifi.py`; flags weak encryption on Windows/macOS/Linux. WPS state
+  isn't reliably exposed to the client OS, so the report gives an advisory
+  instead of a hard detection.)*
 
 ### Week 2 — trust, safety, and packaging
 - Explicit consent screen + `--yes-i-own-this-network` flag pattern. *(shipped in MVP)*

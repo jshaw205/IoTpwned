@@ -48,9 +48,12 @@ scan.
    calls — the snapshot ships with the tool. An **opt-in** online lookup
    (`--online-cve`) can additionally query the live NIST NVD database — see
    *[Online CVE lookup](#online-cve-lookup-opt-in)* below.
-5. **Risk engine** — transparent, rules-based scoring. Every finding comes with a
+5. **Wi-Fi check** — reads your machine's current Wi-Fi connection from the OS and
+   flags weak encryption (Open / WEP / old WPA), nudging you toward WPA2/WPA3.
+   Purely local — nothing is transmitted. Runs by default; `--no-wifi` to skip.
+6. **Risk engine** — transparent, rules-based scoring. Every finding comes with a
    plain-English *why it matters* and *how to fix it* — no jargon dump.
-6. **Report** — a console summary with an overall A–F network grade, plus an
+7. **Report** — a console summary with an overall A–F network grade, plus an
    exportable, self-contained HTML report card you can save or share.
 
 ## Install
@@ -94,6 +97,7 @@ python -m iotpwned --cidr 192.168.1.0/24
 | `--timeout SEC` | Per-port TCP connect timeout (default 1.0s). |
 | `--no-ping` | Skip the ping sweep; use only the existing ARP cache. |
 | `--no-resolve` | Skip reverse-DNS lookups (faster). |
+| `--no-wifi` | Skip the local Wi-Fi encryption check. |
 | `--ports LIST` | Scan a custom comma-separated port list. |
 | `--yes-i-own-this-network` | Confirm authorisation non-interactively. |
 | `--online-cve` | Opt in to the live NVD CVE lookup (asks for consent). |
@@ -151,6 +155,7 @@ iotpwned/
   cve_data.py      # offline snapshot of known IoT/router CVEs
   cve.py           # match fingerprinted devices against the CVE snapshot
   cve_online.py    # opt-in, consent-gated live NVD API lookup
+  wifi.py          # local Wi-Fi encryption check (netsh/airport/nmcli)
   risk.py          # rules-based scoring engine (why + fix per finding)
   report.py        # console + self-contained HTML rendering
   cli.py           # consent gate + pipeline orchestration
@@ -173,8 +178,8 @@ pytest
 
 See [PROJECT_PLAN.md](PROJECT_PLAN.md) for the full plan. Highlights:
 
-- **Week 1** — ~~CVE lookup against a local snapshot~~ ✅ *shipped*; Wi-Fi config
-  check (WPA2/WPA3, WPS); more device fingerprints.
+- **Week 1** — ~~CVE lookup against a local snapshot~~ ✅ *shipped*; ~~Wi-Fi config
+  check (WPA2/WPA3)~~ ✅ *shipped*; more device fingerprints.
 - **Week 2** — PyInstaller single-file executables; a localhost-only Flask web UI.
 - **Week 3** — social-sized shareable report card; ~~opt-in external API lookup~~
   ✅ *online NVD CVE lookup shipped*; opt-in external-exposure check; landing page.

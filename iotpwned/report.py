@@ -67,6 +67,8 @@ def render_console(result: ScanResult, use_color: bool = True) -> str:
         add("  Findings: " + "  ·  ".join(parts))
         add("")
 
+    _render_wifi_console(result, add, use_color)
+
     for host in result.hosts:
         _render_host_console(host, add, use_color)
 
@@ -76,6 +78,55 @@ def render_console(result: ScanResult, use_color: bool = True) -> str:
     add("=" * 64)
     add("")
     return "\n".join(lines)
+
+
+_WIFI_LABELS = {
+    "open": "Open (no encryption)",
+    "wep": "WEP",
+    "wpa": "WPA (TKIP)",
+    "wpa2": "WPA2",
+    "wpa2-enterprise": "WPA2-Enterprise",
+    "wpa3": "WPA3",
+    "unknown": "Unknown",
+}
+_WIFI_GOOD = {"wpa2", "wpa2-enterprise", "wpa3"}
+
+
+def _wifi_label(category: str) -> str:
+    return _WIFI_LABELS.get(category, "Unknown")
+
+
+def _render_wifi_console(result, add, use_color: bool) -> None:
+    info = result.wifi
+    if info is None:
+        return
+    add("Wi-Fi security:")
+    if not info.supported:
+        add("    Could not read Wi-Fi settings on this system (skipped).")
+        add("")
+        return
+    if not info.connected:
+        add("    Not connected to Wi-Fi — nothing to check.")
+        add("")
+        return
+
+    ssid = info.ssid or "(hidden network)"
+    label = _wifi_label(info.category)
+    if result.network_findings:
+        for f in result.network_findings:
+            badge = _c(f" {f.severity.label.upper()} ",
+                       _SEVERITY_COLOR[f.severity], use_color)
+            add(f"    {badge} {f.title}")
+            add(f"        Why:  {f.why}")
+            add(f"        Fix:  {f.fix}")
+    else:
+        tick = " ✓" if info.category in _WIFI_GOOD else ""
+        add("    " + _c(f"{ssid}: {label}{tick}",
+                        "\033[92m" if info.category in _WIFI_GOOD else "",
+                        use_color))
+    add("    Tip: make sure WPS is disabled on your router — its PIN can be "
+        "brute-forced.")
+    add("")
 
 
 def _render_host_console(host: Host, add, use_color: bool) -> None:
@@ -160,6 +211,7 @@ def render_html(result: ScanResult) -> str:
     ) or '<span class="pill" style="background:#1a9850">No risks found</span>'
 
     hosts_html = "\n".join(_host_html(h) for h in result.hosts)
+    wifi_html = _wifi_html(result)
 
     return f"""<!doctype html>
 <html lang="en">
@@ -238,6 +290,8 @@ def render_html(result: ScanResult) -> str:
       {_e(result.finished_at)}</div>
   </header>
 
+  {wifi_html}
+
   <section class="card">
     <h2>Devices &amp; findings</h2>
     {hosts_html}
@@ -251,6 +305,29 @@ def render_html(result: ScanResult) -> str:
 </body>
 </html>
 """
+
+
+def _wifi_html(result) -> str:
+    info = result.wifi
+    if info is None or not info.supported:
+        return ""
+    if not info.connected:
+        body = '<div class="host-meta">Not connected to Wi-Fi — nothing to check.</div>'
+        return f'<section class="card"><h2>Wi-Fi security</h2>{body}</section>'
+
+    ssid = _e(info.ssid or "(hidden network)")
+    label = _e(_wifi_label(info.category))
+    if result.network_findings:
+        body = "\n".join(_finding_html(f) for f in result.network_findings)
+    else:
+        good = info.category in _WIFI_GOOD
+        tick = " ✓" if good else ""
+        color = "#1a9850" if good else "#888"
+        body = (f'<div style="font-weight:600;color:{color}">'
+                f'{ssid}: {label}{tick}</div>')
+    tip = ('<div class="host-meta" style="margin-top:10px">Tip: make sure WPS is '
+           'disabled on your router — its PIN can be brute-forced.</div>')
+    return f'<section class="card"><h2>Wi-Fi security</h2>{body}{tip}</section>'
 
 
 def _host_html(host: Host) -> str:

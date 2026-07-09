@@ -123,17 +123,19 @@ def evaluate(hosts: List[Host]) -> List[Host]:
     return hosts
 
 
-def score_and_grade(hosts: List[Host]) -> tuple:
+def score_and_grade(hosts: List[Host], network_findings=None) -> tuple:
     """Return ``(score, grade)`` for the whole network.
 
     Score starts at 100 and loses points per finding, weighted by severity.
-    Diminishing returns are applied so one very broken device doesn't drag the
-    number to nonsense-negative territory before other issues register.
+    ``network_findings`` are non-host findings (e.g. weak Wi-Fi) that also
+    count toward the grade.
     """
     penalty = 0.0
     for host in hosts:
         for f in host.findings:
             penalty += _SEVERITY_PENALTY[f.severity]
+    for f in network_findings or []:
+        penalty += _SEVERITY_PENALTY[f.severity]
 
     score = max(0, round(100 - penalty))
     return score, grade_for_score(score)
@@ -151,8 +153,15 @@ def grade_for_score(score: int) -> str:
     return "F"
 
 
+def rescore(result: ScanResult) -> ScanResult:
+    """Recompute the score/grade from the result's current findings."""
+    result.score, result.grade = score_and_grade(
+        result.hosts, result.network_findings
+    )
+    return result
+
+
 def finalize(result: ScanResult) -> ScanResult:
     """Evaluate every host, then compute the overall score/grade on the result."""
     evaluate(result.hosts)
-    result.score, result.grade = score_and_grade(result.hosts)
-    return result
+    return rescore(result)
