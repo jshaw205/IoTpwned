@@ -66,7 +66,9 @@ devices instead of your email.
 
 ### Week 3 — distribution and growth loop
 - Shareable HTML/image report card sized for social.
-- Optional, opt-in external-exposure check via a public API.
+- Optional, opt-in external-exposure check via a public API. *(shipped — see
+  `iotpwned/wan.py` and `--wan-check`. Uses Shodan's free InternetDB; sends only
+  the public IP, consent-gated, masked in shareable output.)*
 - Landing page + install script; submit to r/homelab, r/HomeNetworking, Product Hunt.
 
 ### Later
