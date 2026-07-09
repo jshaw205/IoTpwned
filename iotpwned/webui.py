@@ -33,6 +33,43 @@ ScanFn = Callable[[Dict[str, str]], ScanResult]
 # Pages
 # ---------------------------------------------------------------------------
 
+# Kept as a plain (non-f) string so its JS braces don't need escaping. The form
+# is submitted with fetch() so the user sees a live "Scanning…" state instead of
+# a blank loading page while a full-subnet scan (which can take a minute or more,
+# especially with the online CVE lookup) runs. Falls back to a normal POST if JS
+# is disabled.
+_INDEX_SCRIPT = """<script>
+(function () {
+  var form = document.getElementById('f');
+  var formCard = document.getElementById('formcard');
+  var scanning = document.getElementById('scanning');
+  var elapsed = document.getElementById('elapsed');
+  if (!form) return;
+  form.addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    formCard.style.display = 'none';
+    scanning.style.display = 'block';
+    var start = Date.now();
+    var iv = setInterval(function () {
+      elapsed.textContent = Math.round((Date.now() - start) / 1000) + 's';
+    }, 1000);
+    fetch('/scan', { method: 'POST', body: new URLSearchParams(new FormData(form)) })
+      .then(function (r) { return r.text(); })
+      .then(function (htmlText) {
+        clearInterval(iv);
+        document.open(); document.write(htmlText); document.close();
+      })
+      .catch(function (e) {
+        clearInterval(iv);
+        scanning.innerHTML =
+          '<p style="color:#c0392b">The scan could not complete: ' + e +
+          '</p><p><a href="/">Try again</a></p>';
+      });
+  });
+})();
+</script>"""
+
+
 def build_index(token: str, error: Optional[str] = None) -> str:
     err = (f'<div class="err">{html.escape(error)}</div>') if error else ""
     return f"""<!doctype html>
@@ -65,7 +102,11 @@ def build_index(token: str, error: Optional[str] = None) -> str:
   .err {{ background: #fdecea; border: 1px solid #f5b5ae; color: #a12; padding: 10px 12px;
     border-radius: 8px; margin-bottom: 16px; font-size: 14px; }}
   .foot {{ color: #999; font-size: 12.5px; margin-top: 18px; text-align: center; }}
-  #spin {{ display: none; margin-top: 18px; text-align: center; color: #555; }}
+  #scanning {{ text-align: center; }}
+  .spinner {{ width: 42px; height: 42px; border-radius: 50%;
+    border: 4px solid rgba(26,110,46,.2); border-top-color: #1a6e2e;
+    margin: 6px auto 16px; animation: iotspin .9s linear infinite; }}
+  @keyframes iotspin {{ to {{ transform: rotate(360deg); }} }}
   @media (prefers-color-scheme: dark) {{
     body {{ background: #16181d; color: #e6e6e6; }}
     .card {{ background: #23262d; box-shadow: none; }}
@@ -73,36 +114,39 @@ def build_index(token: str, error: Optional[str] = None) -> str:
     .notice {{ background:#2b2716; border-color:#5c5222; }}
   }}
 </style></head><body>
-<div class="wrap"><div class="card">
-  <h1>🛡 IoTpwned</h1>
-  <div class="sub">Scan your home network and get a plain-English report card.</div>
-  {err}
-  <div class="notice"><strong>Only scan networks you own</strong> or have
-    permission to test. Everything runs locally on this machine; nothing is
-    uploaded (unless you opt in to the online CVE lookup below).</div>
-  <form method="POST" action="/scan" id="f">
-    <input type="hidden" name="token" value="{token}">
-    <label for="cidr">Subnet to scan (optional)</label>
-    <input type="text" id="cidr" name="cidr" placeholder="auto-detect, e.g. 192.168.1.0/24">
-    <div class="hint">Leave blank to auto-detect your local subnet.</div>
-    <label class="check"><input type="checkbox" name="consent" value="on">
-      <span>I own or have permission to scan this network.</span></label>
-    <label class="check"><input type="checkbox" name="online_cve" value="on">
-      <span>Also look up known CVEs online (NIST NVD). This sends detected device
-      <em>brand names</em> — never IPs, MACs, or banners — over the internet.</span></label>
-    <button type="submit" id="go">Scan my network</button>
-    <div id="spin">Scanning… this can take up to a minute. Please wait.</div>
-  </form>
-  <div class="foot">IoTpwned v{__version__} · running locally on 127.0.0.1 ·
-    only you can reach this page.</div>
-</div></div>
-<script>
-  document.getElementById('f').addEventListener('submit', function() {{
-    document.getElementById('go').disabled = true;
-    document.getElementById('go').textContent = 'Scanning…';
-    document.getElementById('spin').style.display = 'block';
-  }});
-</script>
+<div class="wrap">
+  <div class="card" id="formcard">
+    <h1>🛡 IoTpwned</h1>
+    <div class="sub">Scan your home network and get a plain-English report card.</div>
+    {err}
+    <div class="notice"><strong>Only scan networks you own</strong> or have
+      permission to test. Everything runs locally on this machine; nothing is
+      uploaded (unless you opt in to the online CVE lookup below).</div>
+    <form method="POST" action="/scan" id="f">
+      <input type="hidden" name="token" value="{token}">
+      <label for="cidr">Subnet to scan (optional)</label>
+      <input type="text" id="cidr" name="cidr" placeholder="auto-detect, e.g. 192.168.1.0/24">
+      <div class="hint">Leave blank to auto-detect your local subnet.</div>
+      <label class="check"><input type="checkbox" name="consent" value="on">
+        <span>I own or have permission to scan this network.</span></label>
+      <label class="check"><input type="checkbox" name="online_cve" value="on">
+        <span>Also look up known CVEs online (NIST NVD). This sends detected device
+        <em>brand names</em> — never IPs, MACs, or banners — over the internet
+        (slower).</span></label>
+      <button type="submit" id="go">Scan my network</button>
+    </form>
+    <div class="foot">IoTpwned v{__version__} · running locally on 127.0.0.1 ·
+      only you can reach this page.</div>
+  </div>
+  <div class="card" id="scanning" style="display:none">
+    <div class="spinner"></div>
+    <h2 style="margin:0 0 8px; border:none">Scanning your network…</h2>
+    <div class="sub" style="margin:0">This can take a minute or two — longer with
+      the online CVE lookup. Please keep this tab open.<br>
+      Elapsed: <span id="elapsed">0s</span></div>
+  </div>
+</div>
+{_INDEX_SCRIPT}
 </body></html>"""
 
 

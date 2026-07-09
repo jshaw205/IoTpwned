@@ -16,6 +16,11 @@ _Nothing yet._
   arguments (e.g. double-clicked), instead of dropping into the terminal CLI.
   Passing any CLI flag still runs the command-line interface. Only the frozen
   binary's default changed; the `iotpwned` pip console script is unchanged.
+- **Web UI:** clicking *Scan* no longer left the browser on a blank, seemingly
+  broken page while the scan ran. The scan is now submitted via `fetch()` with a
+  live "Scanning…" spinner and elapsed timer, and the report renders in place
+  when it finishes (with a friendly error if it fails). Falls back to a plain
+  form POST when JavaScript is disabled.
 
 ## [0.6.0] - 2026-07-09
 

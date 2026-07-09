@@ -38,6 +38,17 @@ def test_index_contains_token_and_controls():
     assert "Only scan networks you own" in page
 
 
+def test_index_uses_async_scan_with_progress():
+    # Submits via fetch (so the browser doesn't sit on a blank loading page)
+    # and shows a scanning state while the request is in flight.
+    page = webui.build_index(TOKEN)
+    assert "fetch('/scan'" in page
+    assert 'id="scanning"' in page
+    assert 'id="elapsed"' in page
+    # still degrades to a normal POST if JS is off
+    assert 'action="/scan"' in page
+
+
 def test_get_root_and_favicon_and_404():
     status, ctype, body = webui.process_get("/", TOKEN)
     assert status == 200 and TOKEN.encode() in body
