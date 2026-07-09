@@ -45,7 +45,9 @@ scan.
    offline snapshot of notorious router/camera CVEs (Hikvision CVE-2021-36260,
    Dahua CVE-2021-33044, the RomPager "Misfortune Cookie", the Mirai-exploited
    TP-Link Archer bug, and more) and tells you to check your firmware. No NVD API
-   calls — the snapshot ships with the tool.
+   calls — the snapshot ships with the tool. An **opt-in** online lookup
+   (`--online-cve`) can additionally query the live NIST NVD database — see
+   *[Online CVE lookup](#online-cve-lookup-opt-in)* below.
 5. **Risk engine** — transparent, rules-based scoring. Every finding comes with a
    plain-English *why it matters* and *how to fix it* — no jargon dump.
 6. **Report** — a console summary with an overall A–F network grade, plus an
@@ -94,6 +96,36 @@ python -m iotpwned --cidr 192.168.1.0/24
 | `--no-resolve` | Skip reverse-DNS lookups (faster). |
 | `--ports LIST` | Scan a custom comma-separated port list. |
 | `--yes-i-own-this-network` | Confirm authorisation non-interactively. |
+| `--online-cve` | Opt in to the live NVD CVE lookup (asks for consent). |
+| `--yes-online-cve` | Pre-consent to the online lookup non-interactively. |
+| `--online-cve-limit N` | Max CVEs per brand from the online lookup (default 5). |
+| `--nvd-api-key KEY` | NVD API key for a higher rate limit (or `NVD_API_KEY`). |
+
+## Online CVE lookup (opt-in)
+
+By default IoTpwned is **fully offline** — the only CVE matching it does is against
+the snapshot that ships with the tool. If you want deeper, always-current results,
+`--online-cve` queries the official **NIST NVD** database
+(`services.nvd.nist.gov`). Because this is the one feature that talks to the
+internet, it is deliberately constrained:
+
+- **Off by default and consent-gated.** It runs only with `--online-cve`, and a
+  separate prompt asks before any request — showing you the exact keywords first.
+- **Data minimisation.** Only the *brand keyword* of a recognised device (e.g.
+  `Hikvision`) is sent. Never IP addresses, MAC addresses, hostnames, or banners.
+  Unknown/generic devices are never looked up, so nothing about them leaves.
+- **Additive & de-duplicated.** Online results supplement the offline snapshot;
+  a CVE already flagged offline isn't reported twice.
+- **Fails safe.** Any network error is ignored per-brand; your offline results
+  still stand.
+
+```bash
+iotpwned --online-cve                    # prompts for consent, then queries NVD
+iotpwned --online-cve --yes-online-cve   # pre-consented (e.g. for scripts)
+```
+
+No API key is required; set `NVD_API_KEY` (or `--nvd-api-key`) for a higher rate
+limit if you scan many device brands.
 
 ## How the grade works
 
@@ -118,6 +150,7 @@ iotpwned/
   data.py          # risky-port catalogue, signatures, OUI fallback table
   cve_data.py      # offline snapshot of known IoT/router CVEs
   cve.py           # match fingerprinted devices against the CVE snapshot
+  cve_online.py    # opt-in, consent-gated live NVD API lookup
   risk.py          # rules-based scoring engine (why + fix per finding)
   report.py        # console + self-contained HTML rendering
   cli.py           # consent gate + pipeline orchestration
@@ -143,8 +176,8 @@ See [PROJECT_PLAN.md](PROJECT_PLAN.md) for the full plan. Highlights:
 - **Week 1** — ~~CVE lookup against a local snapshot~~ ✅ *shipped*; Wi-Fi config
   check (WPA2/WPA3, WPS); more device fingerprints.
 - **Week 2** — PyInstaller single-file executables; a localhost-only Flask web UI.
-- **Week 3** — social-sized shareable report card; opt-in external-exposure check;
-  landing page.
+- **Week 3** — social-sized shareable report card; ~~opt-in external API lookup~~
+  ✅ *online NVD CVE lookup shipped*; opt-in external-exposure check; landing page.
 - **Later** — scheduled re-scans with diff reports; native GUI; mobile companion.
 
 ## License
