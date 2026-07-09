@@ -199,10 +199,14 @@ python packaging/build.py --clean
 ```
 
 The binary is fully self-contained (no Python needed on the target machine) and
-still zero-network by default. **PyInstaller can't cross-compile**, so run the
-build on each OS you want a binary for — Windows on Windows, macOS on macOS,
-Linux on Linux. See [packaging/README.md](packaging/README.md) for details and
-the per-OS notes.
+still zero-network by default. **Double-clicking the executable (running it with
+no arguments) opens the local web UI** — the friendly "click Scan" experience for
+non-technical users. Running it from a terminal with any flag (`--cidr`,
+`--version`, `--help`, …) uses the normal CLI.
+
+**PyInstaller can't cross-compile**, so run the build on each OS you want a binary
+for — Windows on Windows, macOS on macOS, Linux on Linux. See
+[packaging/README.md](packaging/README.md) for details and the per-OS notes.
 
 ### Automated release builds
 

@@ -19,20 +19,26 @@ Output:
 | macOS   | `dist/iotpwned` |
 | Linux   | `dist/iotpwned` |
 
-Then run it like the CLI:
+Then run it:
 
 ```bash
+./dist/iotpwned                 # no args -> opens the local web UI (double-click default)
+./dist/iotpwned --cidr 192.168.1.0/24   # any flag -> normal CLI scan
 ./dist/iotpwned --version
-./dist/iotpwned                 # scan (prompts for consent)
-./dist/iotpwned --web           # launch the local web UI
 ```
+
+The frozen binary defaults to the **web UI** when launched with no arguments (so
+a double-click gives non-technical users the "click Scan" experience). This
+default lives in `iotpwned_launcher.py`; the `iotpwned` pip console script is
+unaffected and stays CLI-first.
 
 ## Files
 
 - [`../iotpwned.spec`](../iotpwned.spec) — the PyInstaller build config (a single
   onefile console app). This is the source of truth for the build.
 - [`iotpwned_launcher.py`](iotpwned_launcher.py) — the entry script PyInstaller
-  freezes (absolute import of `iotpwned.cli:main`).
+  freezes. Calls `iotpwned.cli:main`, defaulting to the web UI when run with no
+  arguments.
 - [`build.py`](build.py) — a small cross-platform wrapper that runs PyInstaller
   on the spec and prints where the binary landed.
 
