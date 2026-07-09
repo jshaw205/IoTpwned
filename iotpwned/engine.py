@@ -12,7 +12,7 @@ import datetime
 import time
 from typing import Callable, List, Optional
 
-from . import cve_online, wifi
+from . import cve_online, wan, wifi
 from .discovery import default_subnet, discover_hosts
 from .fingerprint import fingerprint_hosts
 from .models import ScanResult
@@ -102,3 +102,16 @@ def apply_online_cve(
     )
     rescore(result)
     return added
+
+
+def apply_wan_check(result, *, public_ip=None, timeout: float = 15.0):
+    """Run the opt-in external exposure check and fold it into the result.
+
+    The caller is responsible for consent — this only performs the (already
+    consented) lookups. Returns the :class:`WanInfo` for status reporting.
+    """
+    info, findings = wan.check_wan(public_ip=public_ip, timeout=timeout)
+    result.wan = info
+    result.network_findings.extend(findings)
+    rescore(result)
+    return info

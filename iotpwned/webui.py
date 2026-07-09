@@ -133,6 +133,10 @@ def build_index(token: str, error: Optional[str] = None) -> str:
         <span>Also look up known CVEs online (NIST NVD). This sends detected device
         <em>brand names</em> — never IPs, MACs, or banners — over the internet
         (slower).</span></label>
+      <label class="check"><input type="checkbox" name="wan_check" value="on">
+        <span>Also check what's exposed to the internet (Shodan InternetDB). This
+        sends your <em>public IP</em> — nothing about your LAN — to a
+        "what's my IP" service and Shodan.</span></label>
       <button type="submit" id="go">Scan my network</button>
     </form>
     <div class="foot">IoTpwned v{__version__} · running locally on 127.0.0.1 ·
@@ -221,6 +225,8 @@ def default_scan_fn(form: Dict[str, str]) -> ScanResult:
     result = engine.run_pipeline(cidr=cidr)
     if form.get("online_cve") == "on":
         engine.apply_online_cve(result)
+    if form.get("wan_check") == "on":
+        engine.apply_wan_check(result)
     return result
 
 

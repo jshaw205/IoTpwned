@@ -53,9 +53,12 @@ scan.
 5. **Wi-Fi check** — reads your machine's current Wi-Fi connection from the OS and
    flags weak encryption (Open / WEP / old WPA), nudging you toward WPA2/WPA3.
    Purely local — nothing is transmitted. Runs by default; `--no-wifi` to skip.
-6. **Risk engine** — transparent, rules-based scoring. Every finding comes with a
+6. **External exposure check** (`--wan-check`, **opt-in**) — checks what's
+   reachable from the *internet* on your public IP via Shodan's InternetDB — see
+   *[External exposure check](#external-exposure-check-opt-in)* below.
+7. **Risk engine** — transparent, rules-based scoring. Every finding comes with a
    plain-English *why it matters* and *how to fix it* — no jargon dump.
-7. **Report** — a console summary with an overall A–F network grade, plus an
+8. **Report** — a console summary with an overall A–F network grade, plus an
    exportable, self-contained HTML report card you can save or share.
 
 ## Install
@@ -122,6 +125,9 @@ standard library. `--web-port PORT` and `--no-browser` are available.
 | `--yes-online-cve` | Pre-consent to the online lookup non-interactively. |
 | `--online-cve-limit N` | Max CVEs per brand from the online lookup (default 5). |
 | `--nvd-api-key KEY` | NVD API key for a higher rate limit (or `NVD_API_KEY`). |
+| `--wan-check` | Opt in to the external-exposure check (asks for consent). |
+| `--yes-wan-check` | Pre-consent to the exposure check non-interactively. |
+| `--public-ip IP` | Use this public IP instead of auto-detecting it. |
 
 ## Online CVE lookup (opt-in)
 
@@ -149,6 +155,31 @@ iotpwned --online-cve --yes-online-cve   # pre-consented (e.g. for scripts)
 No API key is required; set `NVD_API_KEY` (or `--nvd-api-key`) for a higher rate
 limit if you scan many device brands.
 
+## External exposure check (opt-in)
+
+The LAN scan sees your network from the inside. `--wan-check` checks it from the
+**outside**: it finds your public IP and asks **Shodan's InternetDB**
+(`internetdb.shodan.io`) what's reachable there from the open internet — a router
+admin panel, camera, or Telnet port that's been accidentally forwarded shows up
+here. Like the online CVE lookup, it's constrained:
+
+- **Off by default and consent-gated.** A separate prompt asks before anything
+  leaves the machine.
+- **Data minimisation.** Only your **public IP** is sent — first to a "what's my
+  IP" service, then to Shodan. No LAN details, device names, MACs, or banners.
+  The public IP is **masked** in the shareable HTML/JSON output.
+- **Honest about the data.** InternetDB reflects Shodan's *most recent* scan, not
+  a live probe: an open port means it *was* reachable when Shodan looked; an empty
+  result isn't a guarantee nothing is exposed.
+
+```bash
+iotpwned --wan-check                 # prompts for consent, then checks exposure
+iotpwned --wan-check --yes-wan-check # pre-consented
+iotpwned --wan-check --public-ip 203.0.113.45   # skip the IP-lookup service
+```
+
+No API key required.
+
 ## How the grade works
 
 Every finding deducts points from a starting score of 100, weighted by severity
@@ -174,6 +205,7 @@ iotpwned/
   cve.py           # match fingerprinted devices against the CVE snapshot
   cve_online.py    # opt-in, consent-gated live NVD API lookup
   wifi.py          # local Wi-Fi encryption check (netsh/airport/nmcli)
+  wan.py           # opt-in external-exposure check (Shodan InternetDB)
   risk.py          # rules-based scoring engine (why + fix per finding)
   report.py        # console + self-contained HTML rendering
   engine.py        # shared scan pipeline used by the CLI and web UI
@@ -237,7 +269,8 @@ See [PROJECT_PLAN.md](PROJECT_PLAN.md) for the full plan. Highlights:
 - **Week 2** — ~~localhost-only web UI~~ ✅ *shipped (stdlib, `--web`)*;
   ~~PyInstaller single-file executables~~ ✅ *shipped (`packaging/`)*.
 - **Week 3** — social-sized shareable report card; ~~opt-in external API lookup~~
-  ✅ *online NVD CVE lookup shipped*; opt-in external-exposure check; landing page.
+  ✅ *online NVD CVE lookup*; ~~opt-in external-exposure check~~ ✅ *shipped
+  (`--wan-check`)*; landing page.
 - **Later** — scheduled re-scans with diff reports; native GUI; mobile companion.
 
 ## Changelog

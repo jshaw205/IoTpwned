@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_Nothing yet._
+### Added
+- **External exposure check** (`--wan-check`, opt-in) — checks what's reachable
+  from the internet on your public IP via Shodan's free InternetDB. Consent-gated
+  and data-minimised: only the public IP is sent (to a "what's my IP" service and
+  Shodan), never LAN details; the public IP is masked in the shareable HTML/JSON.
+  Also available as a checkbox in the web UI. Results reflect Shodan's most recent
+  scan (may be cached), which the report states plainly.
 
 ## [0.6.1] - 2026-07-09
 

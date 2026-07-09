@@ -68,6 +68,7 @@ def render_console(result: ScanResult, use_color: bool = True) -> str:
         add("")
 
     _render_wifi_console(result, add, use_color)
+    _render_wan_console(result, add, use_color)
 
     for host in result.hosts:
         _render_host_console(host, add, use_color)
@@ -96,6 +97,19 @@ def _wifi_label(category: str) -> str:
     return _WIFI_LABELS.get(category, "Unknown")
 
 
+def _findings_with_prefix(result, prefix: str):
+    return [f for f in result.network_findings if f.rule_id.startswith(prefix)]
+
+
+def _add_finding_lines(findings, add, use_color: bool) -> None:
+    for f in findings:
+        badge = _c(f" {f.severity.label.upper()} ",
+                   _SEVERITY_COLOR[f.severity], use_color)
+        add(f"    {badge} {f.title}")
+        add(f"        Why:  {f.why}")
+        add(f"        Fix:  {f.fix}")
+
+
 def _render_wifi_console(result, add, use_color: bool) -> None:
     info = result.wifi
     if info is None:
@@ -112,13 +126,9 @@ def _render_wifi_console(result, add, use_color: bool) -> None:
 
     ssid = info.ssid or "(hidden network)"
     label = _wifi_label(info.category)
-    if result.network_findings:
-        for f in result.network_findings:
-            badge = _c(f" {f.severity.label.upper()} ",
-                       _SEVERITY_COLOR[f.severity], use_color)
-            add(f"    {badge} {f.title}")
-            add(f"        Why:  {f.why}")
-            add(f"        Fix:  {f.fix}")
+    wifi_findings = _findings_with_prefix(result, "wifi-")
+    if wifi_findings:
+        _add_finding_lines(wifi_findings, add, use_color)
     else:
         tick = " ✓" if info.category in _WIFI_GOOD else ""
         add("    " + _c(f"{ssid}: {label}{tick}",
@@ -126,6 +136,29 @@ def _render_wifi_console(result, add, use_color: bool) -> None:
                         use_color))
     add("    Tip: make sure WPS is disabled on your router — its PIN can be "
         "brute-forced.")
+    add("")
+
+
+def _render_wan_console(result, add, use_color: bool) -> None:
+    info = result.wan
+    if info is None:
+        return
+    from .wan import mask_ip
+
+    add("Internet exposure:")
+    if not info.supported or info.error:
+        add(f"    {info.error or 'Could not check external exposure.'}")
+        add("")
+        return
+
+    ip_txt = f" (public IP {info.public_ip})" if info.public_ip else ""
+    wan_findings = _findings_with_prefix(result, "wan-")
+    if wan_findings:
+        _add_finding_lines(wan_findings, add, use_color)
+    else:
+        add("    " + _c(f"Nothing reachable from the internet{ip_txt}. ✓",
+                        "\033[92m", use_color))
+    add("    Source: Shodan InternetDB (its most recent scan; may be cached).")
     add("")
 
 
@@ -212,6 +245,7 @@ def render_html(result: ScanResult) -> str:
 
     hosts_html = "\n".join(_host_html(h) for h in result.hosts)
     wifi_html = _wifi_html(result)
+    wan_html = _wan_html(result)
 
     return f"""<!doctype html>
 <html lang="en">
@@ -291,6 +325,7 @@ def render_html(result: ScanResult) -> str:
   </header>
 
   {wifi_html}
+  {wan_html}
 
   <section class="card">
     <h2>Devices &amp; findings</h2>
@@ -317,8 +352,9 @@ def _wifi_html(result) -> str:
 
     ssid = _e(info.ssid or "(hidden network)")
     label = _e(_wifi_label(info.category))
-    if result.network_findings:
-        body = "\n".join(_finding_html(f) for f in result.network_findings)
+    wifi_findings = _findings_with_prefix(result, "wifi-")
+    if wifi_findings:
+        body = "\n".join(_finding_html(f) for f in wifi_findings)
     else:
         good = info.category in _WIFI_GOOD
         tick = " ✓" if good else ""
@@ -328,6 +364,29 @@ def _wifi_html(result) -> str:
     tip = ('<div class="host-meta" style="margin-top:10px">Tip: make sure WPS is '
            'disabled on your router — its PIN can be brute-forced.</div>')
     return f'<section class="card"><h2>Wi-Fi security</h2>{body}{tip}</section>'
+
+
+def _wan_html(result) -> str:
+    info = result.wan
+    if info is None:
+        return ""
+    from .wan import mask_ip
+
+    if not info.supported or info.error:
+        note = _e(info.error or "Could not check external exposure.")
+        body = f'<div class="host-meta">{note}</div>'
+        return f'<section class="card"><h2>Internet exposure</h2>{body}</section>'
+
+    ip_txt = f" ({_e(mask_ip(info.public_ip))})" if info.public_ip else ""
+    wan_findings = _findings_with_prefix(result, "wan-")
+    if wan_findings:
+        body = "\n".join(_finding_html(f) for f in wan_findings)
+    else:
+        body = (f'<div style="font-weight:600;color:#1a9850">Nothing reachable '
+                f'from the internet{ip_txt} ✓</div>')
+    src = ('<div class="host-meta" style="margin-top:10px">Source: Shodan '
+           'InternetDB (its most recent scan; may be cached).</div>')
+    return f'<section class="card"><h2>Internet exposure</h2>{body}{src}</section>'
 
 
 def _host_html(host: Host) -> str:

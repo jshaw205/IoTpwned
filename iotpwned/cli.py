@@ -16,7 +16,7 @@ import os
 import sys
 from typing import List, Optional
 
-from . import __version__, cve_online, engine, webui
+from . import __version__, cve_online, engine, wan, webui
 from .discovery import default_subnet
 from .models import ScanResult
 from .report import render_console, render_html
@@ -88,6 +88,17 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--nvd-api-key", metavar="KEY", default=None,
                    help="Optional NVD API key for a higher rate limit "
                         "(falls back to the NVD_API_KEY environment variable).")
+    p.add_argument("--wan-check", action="store_true",
+                   help="Also check what's exposed to the internet on your "
+                        "public IP, via Shodan's InternetDB. OFF by default and "
+                        "asks for consent first, since it sends your public IP "
+                        "to an external service.")
+    p.add_argument("--yes-wan-check", action="store_true",
+                   help="Pre-consent to the external exposure check (implies "
+                        "--wan-check) and skip its interactive prompt.")
+    p.add_argument("--public-ip", metavar="IP", default=None,
+                   help="Use this public IP for the exposure check instead of "
+                        "auto-detecting it (avoids the IP-lookup service).")
     p.add_argument("--version", action="version",
                    version=f"IoTpwned {__version__}")
     return p
@@ -160,6 +171,49 @@ def _maybe_online_cve(result: ScanResult, args: argparse.Namespace) -> None:
         progress=_progress("NVD lookup"),
     )
     print(f"  Online CVE lookup added {added} finding(s).")
+
+
+def _confirm_wan_consent(assume_yes: bool) -> bool:
+    """Separate consent gate for the external exposure check."""
+    print()
+    print("  ── External exposure check ───────────────────────────────────")
+    print("  This looks up your PUBLIC IP (via api.ipify.org) and checks it")
+    print("  against Shodan's InternetDB (internetdb.shodan.io) to see what's")
+    print("  reachable from the internet. Only your public IP is sent — no LAN")
+    print("  details, device names, or MAC addresses. Results reflect Shodan's")
+    print("  most recent scan and may be cached.")
+    print("  ──────────────────────────────────────────────────────────────")
+    if assume_yes:
+        print("  Consent confirmed via --yes-wan-check.\n")
+        return True
+    if not sys.stdin.isatty():
+        print("  Skipping exposure check: no terminal to confirm consent. "
+              "Re-run with --yes-wan-check to allow it.\n")
+        return False
+    try:
+        answer = input("  Look up your public IP and query Shodan? [y/N] ")
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return False
+    return answer.strip().lower() in ("y", "yes")
+
+
+def _maybe_wan_check(result: ScanResult, args: argparse.Namespace) -> None:
+    """If enabled and consented, run the external exposure check."""
+    if not (args.wan_check or args.yes_wan_check):
+        return
+    if not _confirm_wan_consent(args.yes_wan_check):
+        return
+
+    sys.stderr.write("  Checking external exposure ...\n")
+    info = engine.apply_wan_check(result, public_ip=args.public_ip)
+    if not info.supported or info.error:
+        print(f"  Exposure check: {info.error or 'unavailable'}.")
+    elif not info.open_ports and not info.vulns:
+        print("  Exposure check: Shodan reports nothing open on your public IP. ✓")
+    else:
+        print(f"  Exposure check: {len(info.open_ports)} port(s) reachable from "
+              f"the internet.")
 
 
 def _parse_ports(spec: Optional[str]) -> Optional[List[int]]:
@@ -251,6 +305,19 @@ def _write_json(result: ScanResult, path: str) -> None:
             }
             if result.wifi is not None else None
         ),
+        "wan": (
+            {
+                "checked": result.wan.checked,
+                "supported": result.wan.supported,
+                # Public IP is masked in saved output for privacy.
+                "public_ip_masked": wan.mask_ip(result.wan.public_ip),
+                "open_ports": result.wan.open_ports,
+                "vulns": result.wan.vulns,
+                "source": result.wan.source,
+                "error": result.wan.error,
+            }
+            if result.wan is not None else None
+        ),
         "network_findings": [_finding_json(f) for f in result.network_findings],
         "hosts": [
             {
@@ -308,6 +375,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     try:
         result = run_scan(args)
         _maybe_online_cve(result, args)
+        _maybe_wan_check(result, args)
     except KeyboardInterrupt:
         print("\nInterrupted.")
         return 130

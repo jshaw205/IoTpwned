@@ -89,6 +89,20 @@ class WifiInfo:
 
 
 @dataclass
+class WanInfo:
+    """Result of the opt-in external (internet-facing) exposure check."""
+
+    checked: bool = False        # True if we got a result from the exposure source
+    supported: bool = True       # False if the public IP couldn't be determined
+    public_ip: Optional[str] = None
+    open_ports: List[int] = field(default_factory=list)
+    vulns: List[str] = field(default_factory=list)
+    hostnames: List[str] = field(default_factory=list)
+    source: str = "Shodan InternetDB"
+    error: Optional[str] = None
+
+
+@dataclass
 class ScanResult:
     """The full result of one IoTpwned run."""
 
@@ -104,6 +118,7 @@ class ScanResult:
     # (e.g. weak Wi-Fi encryption). These count toward the grade too.
     network_findings: List[Finding] = field(default_factory=list)
     wifi: Optional[WifiInfo] = None
+    wan: Optional[WanInfo] = None
 
     @property
     def all_findings(self) -> List[Finding]:
