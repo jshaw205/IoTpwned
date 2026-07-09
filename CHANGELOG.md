@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_Nothing yet._
+
+## [0.7.0] - 2026-07-09
+
 ### Added
 - **External exposure check** (`--wan-check`, opt-in) — checks what's reachable
   from the internet on your public IP via Shodan's free InternetDB. Consent-gated
@@ -72,6 +76,7 @@ Windows are attached to the [GitHub Release](https://github.com/jshaw205/IoTpwne
 - The only feature that ever contacts the internet is the opt-in `--online-cve`
   lookup, and it transmits only device brand keywords.
 
-[Unreleased]: https://github.com/jshaw205/IoTpwned/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/jshaw205/IoTpwned/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/jshaw205/IoTpwned/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/jshaw205/IoTpwned/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/jshaw205/IoTpwned/releases/tag/v0.6.0
