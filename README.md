@@ -87,6 +87,20 @@ Or without installing:
 python -m iotpwned --cidr 192.168.1.0/24
 ```
 
+### Web UI
+
+Prefer clicking a button? Launch the local, **localhost-only** web UI:
+
+```bash
+iotpwned --web            # opens http://127.0.0.1:8765 in your browser
+```
+
+Tick the consent box, hit **Scan my network**, and you get the same report card
+in the browser. It binds to `127.0.0.1` only (never the network), validates the
+`Host` header against DNS-rebinding, and uses a per-session token so no other
+site can drive your scanner. No extra dependencies — it's built on Python's
+standard library. `--web-port PORT` and `--no-browser` are available.
+
 ### Useful flags
 
 | Flag | Purpose |
@@ -100,6 +114,8 @@ python -m iotpwned --cidr 192.168.1.0/24
 | `--no-wifi` | Skip the local Wi-Fi encryption check. |
 | `--ports LIST` | Scan a custom comma-separated port list. |
 | `--yes-i-own-this-network` | Confirm authorisation non-interactively. |
+| `--web` | Launch the localhost-only web UI instead of the CLI scan. |
+| `--web-port PORT` | Port for the web UI (default 8765). |
 | `--online-cve` | Opt in to the live NVD CVE lookup (asks for consent). |
 | `--yes-online-cve` | Pre-consent to the online lookup non-interactively. |
 | `--online-cve-limit N` | Max CVEs per brand from the online lookup (default 5). |
@@ -158,6 +174,8 @@ iotpwned/
   wifi.py          # local Wi-Fi encryption check (netsh/airport/nmcli)
   risk.py          # rules-based scoring engine (why + fix per finding)
   report.py        # console + self-contained HTML rendering
+  engine.py        # shared scan pipeline used by the CLI and web UI
+  webui.py         # localhost-only web UI (stdlib http.server)
   cli.py           # consent gate + pipeline orchestration
 tests/             # pytest unit tests for every stage
 ```
@@ -180,7 +198,8 @@ See [PROJECT_PLAN.md](PROJECT_PLAN.md) for the full plan. Highlights:
 
 - **Week 1** — ~~CVE lookup against a local snapshot~~ ✅ *shipped*; ~~Wi-Fi config
   check (WPA2/WPA3)~~ ✅ *shipped*; more device fingerprints.
-- **Week 2** — PyInstaller single-file executables; a localhost-only Flask web UI.
+- **Week 2** — ~~localhost-only web UI~~ ✅ *shipped (stdlib, `--web`)*; PyInstaller
+  single-file executables.
 - **Week 3** — social-sized shareable report card; ~~opt-in external API lookup~~
   ✅ *online NVD CVE lookup shipped*; opt-in external-exposure check; landing page.
 - **Later** — scheduled re-scans with diff reports; native GUI; mobile companion.

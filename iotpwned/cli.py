@@ -11,21 +11,15 @@ Pipeline: discovery -> port scan -> fingerprint -> risk score -> report.
 from __future__ import annotations
 
 import argparse
-import datetime
 import json
+import os
 import sys
-import time
 from typing import List, Optional
 
-import os
-
-from . import __version__, cve_online, wifi
-from .discovery import default_subnet, discover_hosts
-from .fingerprint import fingerprint_hosts
+from . import __version__, cve_online, engine, webui
+from .discovery import default_subnet
 from .models import ScanResult
 from .report import render_console, render_html
-from .risk import finalize, rescore
-from .scanner import scan_hosts
 
 CONSENT_TEXT = """\
 ┌────────────────────────────────────────────────────────────────┐
@@ -70,6 +64,13 @@ def build_parser() -> argparse.ArgumentParser:
                         "built-in risky-port list.")
     p.add_argument("--no-color", action="store_true",
                    help="Disable coloured console output.")
+    p.add_argument("--web", action="store_true",
+                   help="Launch the local (localhost-only) web UI instead of "
+                        "scanning from the command line.")
+    p.add_argument("--web-port", type=int, default=8765, metavar="PORT",
+                   help="Port for the web UI (default 8765).")
+    p.add_argument("--no-browser", action="store_true",
+                   help="With --web, don't auto-open a browser tab.")
     p.add_argument("--yes-i-own-this-network", action="store_true",
                    help="Confirm you own/are authorised to scan this network "
                         "and skip the interactive consent prompt.")
@@ -152,14 +153,12 @@ def _maybe_online_cve(result: ScanResult, args: argparse.Namespace) -> None:
         return
 
     api_key = args.nvd_api_key or os.environ.get("NVD_API_KEY")
-    added = cve_online.enrich(
-        keyword_map,
+    added = engine.apply_online_cve(
+        result,
         limit=args.online_cve_limit,
         api_key=api_key,
         progress=_progress("NVD lookup"),
     )
-    # Findings changed, so the score/grade must be recomputed.
-    rescore(result)
     print(f"  Online CVE lookup added {added} finding(s).")
 
 
@@ -201,40 +200,23 @@ def run_scan(args: argparse.Namespace) -> ScanResult:
             "--cidr, e.g. --cidr 192.168.1.0/24"
         )
 
-    started = time.time()
-    started_iso = datetime.datetime.now().isoformat(timespec="seconds")
-
     print(f"\nScanning {cidr} ...\n")
 
-    hosts = discover_hosts(
+    def _found(hosts):
+        print(f"  Found {len(hosts)} device(s). Scanning ports ...")
+
+    return engine.run_pipeline(
         cidr=cidr,
-        timeout_ms=args.ping_timeout,
+        ports=ports,
+        timeout=args.timeout,
+        ping_timeout=args.ping_timeout,
         do_ping=not args.no_ping,
-        resolve_names=not args.no_resolve,
-        progress=None if args.no_ping else _progress("Pinging"),
+        resolve=not args.no_resolve,
+        do_wifi=not args.no_wifi,
+        on_discovery_progress=_progress("Pinging"),
+        on_hosts_discovered=_found,
+        on_scan_progress=_progress("Port-scanning"),
     )
-    print(f"  Found {len(hosts)} device(s). Scanning ports ...")
-
-    scan_hosts(hosts, ports=ports, timeout=args.timeout,
-               progress=_progress("Port-scanning"))
-
-    fingerprint_hosts(hosts)
-
-    result = ScanResult(
-        subnet=cidr,
-        hosts=hosts,
-        started_at=started_iso,
-        finished_at=datetime.datetime.now().isoformat(timespec="seconds"),
-        duration_seconds=time.time() - started,
-    )
-
-    if not args.no_wifi:
-        info, wifi_findings = wifi.check_wifi()
-        result.wifi = info
-        result.network_findings.extend(wifi_findings)
-
-    finalize(result)
-    return result
 
 
 def _finding_json(f) -> dict:
@@ -311,6 +293,13 @@ def _force_utf8_output() -> None:
 def main(argv: Optional[List[str]] = None) -> int:
     _force_utf8_output()
     args = build_parser().parse_args(argv)
+
+    if args.web:
+        try:
+            webui.serve(port=args.web_port, open_browser=not args.no_browser)
+        except KeyboardInterrupt:
+            print("\nWeb UI stopped.")
+        return 0
 
     if not _confirm_consent(args.yes_i_own_this_network):
         print("Aborted. No scan was performed.")
