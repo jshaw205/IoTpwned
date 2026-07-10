@@ -115,3 +115,24 @@ def apply_wan_check(result, *, public_ip=None, timeout: float = 15.0):
     result.network_findings.extend(findings)
     rescore(result)
     return info
+
+
+def apply_cred_check(result, *, timeout: float = 5.0):
+    """Run the opt-in default-password check across candidate hosts.
+
+    Caller is responsible for consent. Appends findings to the relevant hosts and
+    re-scores. Returns ``(devices_tested, weak_found)``.
+    """
+    from . import credcheck
+
+    tested = weak = 0
+    for host in result.hosts:
+        findings, did_test = credcheck.check_host_credentials(host, timeout=timeout)
+        if did_test:
+            tested += 1
+        if findings:
+            weak += len(findings)
+            host.findings.extend(findings)
+            host.findings.sort(key=lambda f: (-f.severity.value, f.port or 0))
+    rescore(result)
+    return tested, weak

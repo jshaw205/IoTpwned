@@ -31,7 +31,8 @@ CONSENT_TEXT = """\
 │                                                                │
 │  Only scan networks you OWN or have PERMISSION to test.        │
 │  Scanning other people's networks is illegal in most places.   │
-│  IoTpwned never attempts any password or login.               │
+│  By default IoTpwned never tries a login; the default-password │
+│  check (--cred-check) is opt-in and asks again before running. │
 └────────────────────────────────────────────────────────────────┘
 """
 
@@ -99,6 +100,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--public-ip", metavar="IP", default=None,
                    help="Use this public IP for the exposure check instead of "
                         "auto-detecting it (avoids the IP-lookup service).")
+    p.add_argument("--cred-check", action="store_true",
+                   help="Actively test admin panels for well-known DEFAULT "
+                        "passwords (e.g. admin/admin). OFF by default and asks "
+                        "for consent — this is the only check that tries a login.")
+    p.add_argument("--yes-cred-check", action="store_true",
+                   help="Pre-consent to the default-password check (implies "
+                        "--cred-check) and skip its interactive prompt.")
     p.add_argument("--version", action="version",
                    version=f"IoTpwned {__version__}")
     return p
@@ -214,6 +222,49 @@ def _maybe_wan_check(result: ScanResult, args: argparse.Namespace) -> None:
     else:
         print(f"  Exposure check: {len(info.open_ports)} port(s) reachable from "
               f"the internet.")
+
+
+def _confirm_cred_consent(assume_yes: bool) -> bool:
+    """Strong, separate consent gate for the active default-password check."""
+    print()
+    print("  ══ Default-password check ════════════════════════════════════")
+    print("  WARNING: this ACTIVELY TRIES to log in to admin panels on your")
+    print("  network using well-known DEFAULT passwords (e.g. admin/admin).")
+    print("  Run it ONLY on devices you own. It makes a few login attempts per")
+    print("  device and could, in rare cases, briefly lock an admin account.")
+    print("  It never changes any settings — it only reports what it finds.")
+    print("  ══════════════════════════════════════════════════════════════")
+    if assume_yes:
+        print("  Consent confirmed via --yes-cred-check.\n")
+        return True
+    if not sys.stdin.isatty():
+        print("  Skipping default-password check: no terminal to confirm "
+              "consent. Re-run with --yes-cred-check to allow it.\n")
+        return False
+    try:
+        answer = input("  Try default passwords on your own admin panels? [y/N] ")
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return False
+    return answer.strip().lower() in ("y", "yes")
+
+
+def _maybe_cred_check(result: ScanResult, args: argparse.Namespace) -> None:
+    """If enabled and consented, actively test admin panels for default logins."""
+    if not (args.cred_check or args.yes_cred_check):
+        return
+    if not _confirm_cred_consent(args.yes_cred_check):
+        return
+
+    sys.stderr.write("  Testing admin panels for default passwords ...\n")
+    tested, weak = engine.apply_cred_check(result)
+    if tested == 0:
+        print("  Default-password check: no testable admin panels found.")
+    elif weak == 0:
+        print(f"  Default-password check: {tested} admin panel(s) tested, none "
+              f"on a default password. ✓")
+    else:
+        print(f"  Default-password check: {weak} device(s) on a DEFAULT password.")
 
 
 def _parse_ports(spec: Optional[str]) -> Optional[List[int]]:
@@ -376,6 +427,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         result = run_scan(args)
         _maybe_online_cve(result, args)
         _maybe_wan_check(result, args)
+        _maybe_cred_check(result, args)
     except KeyboardInterrupt:
         print("\nInterrupted.")
         return 130
