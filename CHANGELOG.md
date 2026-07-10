@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_Nothing yet._
+
+## [0.8.0] - 2026-07-10
+
 ### Added
 - **Default-password check** (`--cred-check`, opt-in) — actively tests device
   admin panels for well-known default logins (admin/admin, brand-specific factory
@@ -89,7 +93,8 @@ Windows are attached to the [GitHub Release](https://github.com/jshaw205/IoTpwne
 - The only feature that ever contacts the internet is the opt-in `--online-cve`
   lookup, and it transmits only device brand keywords.
 
-[Unreleased]: https://github.com/jshaw205/IoTpwned/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/jshaw205/IoTpwned/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/jshaw205/IoTpwned/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/jshaw205/IoTpwned/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/jshaw205/IoTpwned/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/jshaw205/IoTpwned/releases/tag/v0.6.0
