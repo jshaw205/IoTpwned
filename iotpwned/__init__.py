@@ -3,6 +3,6 @@
 Everything runs locally. No data ever leaves the machine.
 """
 
-__version__ = "0.7.0"
+__version__ = "0.8.0"
 
 APP_NAME = "IoTpwned"

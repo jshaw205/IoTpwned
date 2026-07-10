@@ -74,7 +74,7 @@ def render_console(result: ScanResult, use_color: bool = True) -> str:
         _render_host_console(host, add, use_color)
 
     add("=" * 64)
-    add("  IoTpwned only scanned your own LAN and never tried any password.")
+    add("  IoTpwned only scanned devices on your own LAN.")
     add("  Fix the Critical and High items first. Re-run after changes.")
     add("=" * 64)
     add("")

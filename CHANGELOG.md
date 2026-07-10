@@ -7,7 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_Nothing yet._
+### Added
+- **Default-password check** (`--cred-check`, opt-in) — actively tests device
+  admin panels for well-known default logins (admin/admin, brand-specific factory
+  defaults). It's the only check that attempts a login, so it's off by default
+  with its own explicit consent gate, is conservative and non-destructive (HTTP
+  Basic auth only — a single authenticated GET, never POSTs or changes settings),
+  probes only likely admin devices, and stops on the first hit or a lockout
+  signal. A working default login is reported as a Critical finding naming the
+  credential. Also available as a (clearly labelled) checkbox in the web UI.
+
+### Changed
+- Messaging updated throughout (CLI banner, README, landing page, report footer):
+  IoTpwned no longer claims it "never attempts a login" unconditionally — that's
+  true by default, with the opt-in `--cred-check` as the stated exception.
 
 ## [0.7.0] - 2026-07-09
 

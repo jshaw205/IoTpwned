@@ -7,8 +7,9 @@ Rules are deliberately simple and transparent (no ML, no black box):
   a device exposing an unusually large attack surface).
 * Findings are scored into a 0–100 network health number and an A–F grade.
 
-Note (ethics): IoTpwned *flags* that a default-credential-prone service is open.
-It never attempts a login. That line stays firm.
+Note (ethics): the risk engine only *flags* that a default-credential-prone
+service is open — it never logs in. Actually testing default passwords is a
+separate, opt-in, consent-gated feature (see ``credcheck.py``).
 """
 
 from __future__ import annotations

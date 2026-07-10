@@ -26,11 +26,12 @@ of your email. No cloud upload, no account, no data leaves your machine.
 
 ## ⚠️ Only scan networks you own
 
-IoTpwned only scans devices on the network it is run from (**your own LAN**) and
-**never attempts any password or login** — it only reports that a risky service is
-*open*. Scanning networks you don't own or don't have permission to test is
-**illegal in most jurisdictions**. IoTpwned asks you to confirm this before every
-scan.
+IoTpwned only scans devices on the network it is run from (**your own LAN**), and
+by default **never attempts a login** — it only reports that a risky service is
+*open*. The one exception is the **opt-in** default-password check
+(`--cred-check`), which actively tests admin panels and has its own separate
+consent prompt — run it only on devices you own. Scanning networks you don't own
+is **illegal in most jurisdictions**. IoTpwned asks you to confirm before every scan.
 
 ---
 
@@ -56,9 +57,12 @@ scan.
 6. **External exposure check** (`--wan-check`, **opt-in**) — checks what's
    reachable from the *internet* on your public IP via Shodan's InternetDB — see
    *[External exposure check](#external-exposure-check-opt-in)* below.
-7. **Risk engine** — transparent, rules-based scoring. Every finding comes with a
+7. **Default-password check** (`--cred-check`, **opt-in**) — actively tests admin
+   panels for well-known default logins (admin/admin and friends). The one check
+   that attempts a login — see *[Default-password check](#default-password-check-opt-in)* below.
+8. **Risk engine** — transparent, rules-based scoring. Every finding comes with a
    plain-English *why it matters* and *how to fix it* — no jargon dump.
-8. **Report** — a console summary with an overall A–F network grade, plus an
+9. **Report** — a console summary with an overall A–F network grade, plus an
    exportable, self-contained HTML report card you can save or share.
 
 ## Install
@@ -128,6 +132,8 @@ standard library. `--web-port PORT` and `--no-browser` are available.
 | `--wan-check` | Opt in to the external-exposure check (asks for consent). |
 | `--yes-wan-check` | Pre-consent to the exposure check non-interactively. |
 | `--public-ip IP` | Use this public IP instead of auto-detecting it. |
+| `--cred-check` | Opt in to the default-password check (asks for consent). |
+| `--yes-cred-check` | Pre-consent to the default-password check non-interactively. |
 
 ## Online CVE lookup (opt-in)
 
@@ -180,6 +186,33 @@ iotpwned --wan-check --public-ip 203.0.113.45   # skip the IP-lookup service
 
 No API key required.
 
+## Default-password check (opt-in)
+
+Every other check is passive — it observes, it never logs in. `--cred-check` is
+the deliberate exception: it **actively tries well-known default passwords**
+(admin/admin, admin/password, the brand-specific factory defaults) against the
+admin panels it finds, so it can tell you if your router or camera is still on the
+login it shipped with. It is the most sensitive feature, so it is the most
+constrained:
+
+- **Off by default, with its own explicit consent** — a stronger, separate prompt
+  than the other checks, because this one attempts a login.
+- **Only test devices you own.** Trying default passwords on other people's gear
+  is unauthorised access and illegal in most places.
+- **Conservative & non-destructive.** Only HTTP Basic-auth panels are tested (a
+  single authenticated `GET`); it never POSTs or changes a setting. A handful of
+  well-known defaults per device, it stops on the first hit or a lockout signal,
+  and it only probes likely admin devices (your gateway, fingerprinted
+  routers/cameras). Form-based logins are skipped rather than guessed at.
+
+```bash
+iotpwned --cred-check                  # prompts for consent, then tests admin panels
+iotpwned --cred-check --yes-cred-check # pre-consented
+```
+
+If a default login works, you get a **Critical** finding naming the credential
+that got in — so you know exactly what to change.
+
 ## How the grade works
 
 Every finding deducts points from a starting score of 100, weighted by severity
@@ -206,6 +239,7 @@ iotpwned/
   cve_online.py    # opt-in, consent-gated live NVD API lookup
   wifi.py          # local Wi-Fi encryption check (netsh/airport/nmcli)
   wan.py           # opt-in external-exposure check (Shodan InternetDB)
+  credcheck.py     # opt-in default-password check (HTTP Basic auth)
   risk.py          # rules-based scoring engine (why + fix per finding)
   report.py        # console + self-contained HTML rendering
   engine.py        # shared scan pipeline used by the CLI and web UI

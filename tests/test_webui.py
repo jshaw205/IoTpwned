@@ -36,6 +36,7 @@ def test_index_contains_token_and_controls():
     assert 'name="consent"' in page
     assert 'name="online_cve"' in page
     assert 'name="wan_check"' in page
+    assert 'name="cred_check"' in page
     assert "Only scan networks you own" in page
 
 

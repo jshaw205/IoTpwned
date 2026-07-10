@@ -137,6 +137,10 @@ def build_index(token: str, error: Optional[str] = None) -> str:
         <span>Also check what's exposed to the internet (Shodan InternetDB). This
         sends your <em>public IP</em> — nothing about your LAN — to a
         "what's my IP" service and Shodan.</span></label>
+      <label class="check"><input type="checkbox" name="cred_check" value="on">
+        <span><strong>Try default passwords</strong> on admin panels (e.g.
+        admin/admin). This <em>actively attempts a login</em> — only on devices
+        you own. A few attempts per device; never changes settings.</span></label>
       <button type="submit" id="go">Scan my network</button>
     </form>
     <div class="foot">IoTpwned v{__version__} · running locally on 127.0.0.1 ·
@@ -227,6 +231,8 @@ def default_scan_fn(form: Dict[str, str]) -> ScanResult:
         engine.apply_online_cve(result)
     if form.get("wan_check") == "on":
         engine.apply_wan_check(result)
+    if form.get("cred_check") == "on":
+        engine.apply_cred_check(result)
     return result
 
 

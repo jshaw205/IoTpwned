@@ -34,7 +34,8 @@ devices instead of your email.
 - Wi-Fi encryption/config auditing (WPA2 vs WPA3, WPS).
 - External/WAN exposure testing (needs an outside vantage point).
 - Actual credential testing (default-password attempts) — the MVP only *flags*
-  that a default-cred-prone service is open; it never attempts a login.
+  that a default-cred-prone service is open; it never attempts a login. *(Later
+  shipped as the opt-in, consent-gated `--cred-check` — see `iotpwned/credcheck.py`.)*
 - GUI/packaging into a double-click app.
 
 ## Roadmap
@@ -79,7 +80,9 @@ devices instead of your email.
 
 ## Legal / ethical note
 
-IoTpwned only scans devices on the network it is run from (your own LAN) and
-**never attempts authentication**. Scanning networks you don't own or don't have
-permission to test is illegal in most jurisdictions. This stays front and center
-in the README and the CLI banner.
+By default IoTpwned only scans devices on the network it is run from (your own
+LAN) and does not attempt authentication. The optional `--cred-check` (off by
+default, with its own separate consent prompt) actively tests admin panels for
+well-known default passwords — run it only on devices you own. Scanning networks
+you don't own or don't have permission to test is illegal in most jurisdictions.
+This stays front and center in the README and the CLI banner.
