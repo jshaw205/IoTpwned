@@ -7,6 +7,7 @@ screenshotted with no external assets and no network calls (privacy-first).
 from __future__ import annotations
 
 import html
+import textwrap
 from typing import List
 
 from . import __version__
@@ -37,15 +38,46 @@ def _c(text: str, color: str, use_color: bool) -> str:
     return f"{color}{text}{_RESET}" if use_color else text
 
 
+def _is_multi_subnet(result: ScanResult) -> bool:
+    return len(result.subnets) > 1
+
+
+def _group_by_subnet(result: ScanResult):
+    """Return ``[(subnet, [hosts])]`` preserving first-seen subnet order."""
+    groups: dict = {}
+    order: List[str] = []
+    for host in result.hosts:
+        key = host.subnet or result.subnet
+        if key not in groups:
+            groups[key] = []
+            order.append(key)
+        groups[key].append(host)
+    return [(key, groups[key]) for key in order]
+
+
+# Shown once when a run covers more than one subnet: device fingerprinting via
+# ARP is Layer-2 and only resolves within each device's own broadcast domain.
+_MULTI_SUBNET_CAVEAT = (
+    "Note: MAC/vendor labels come from ARP, which only works within a device's "
+    "own subnet. Devices on subnets other than this machine's may show fewer "
+    "details (IP, ports and banners are still checked)."
+)
+
+
 def render_console(result: ScanResult, use_color: bool = True) -> str:
     lines: List[str] = []
     add = lines.append
 
+    multi = _is_multi_subnet(result)
+    scope = (f"{len(result.subnets)} subnets" if multi else result.subnet)
+
     add("")
     add("=" * 64)
-    add(f"  IoTpwned report — {result.subnet}")
+    add(f"  IoTpwned report — {scope}")
     add(f"  {len(result.hosts)} device(s) found · scan took "
         f"{result.duration_seconds:.1f}s")
+    if multi:
+        add(f"  Subnets: {', '.join(result.subnets)}")
     add("=" * 64)
 
     grade_color = _GRADE_COLOR.get(result.grade, "")
@@ -70,11 +102,23 @@ def render_console(result: ScanResult, use_color: bool = True) -> str:
     _render_wifi_console(result, add, use_color)
     _render_wan_console(result, add, use_color)
 
-    for host in result.hosts:
-        _render_host_console(host, add, use_color)
+    if multi:
+        for subnet, hosts in _group_by_subnet(result):
+            add("-" * 64)
+            add(f"  Subnet {subnet} — {len(hosts)} device(s)")
+            add("-" * 64)
+            add("")
+            for host in hosts:
+                _render_host_console(host, add, use_color)
+    else:
+        for host in result.hosts:
+            _render_host_console(host, add, use_color)
 
     add("=" * 64)
     add("  IoTpwned only scanned devices on your own LAN.")
+    if multi:
+        for line in textwrap.wrap(_MULTI_SUBNET_CAVEAT, 60):
+            add(f"  {line}")
     add("  Fix the Critical and High items first. Re-run after changes.")
     add("=" * 64)
     add("")
@@ -243,9 +287,17 @@ def render_html(result: ScanResult) -> str:
         if tally.get(sev)
     ) or '<span class="pill" style="background:#1a9850">No risks found</span>'
 
-    hosts_html = "\n".join(_host_html(h) for h in result.hosts)
+    multi = _is_multi_subnet(result)
+    devices_html = _devices_html(result)
     wifi_html = _wifi_html(result)
     wan_html = _wan_html(result)
+
+    scope = (f"{len(result.subnets)} subnets" if multi
+             else f"Subnet {_e(result.subnet)}")
+    caveat_html = (
+        f'<div class="host-meta" style="margin-top:8px">{_e(_MULTI_SUBNET_CAVEAT)}</div>'
+        if multi else ""
+    )
 
     return f"""<!doctype html>
 <html lang="en">
@@ -319,18 +371,16 @@ def render_html(result: ScanResult) -> str:
     <div class="score">Network health score: <strong>{result.score}/100</strong></div>
     <div class="blurb">{_e(_grade_blurb(grade))}</div>
     <div class="pills">{tally_html}</div>
-    <div class="host-meta">Subnet {_e(result.subnet)} ·
+    <div class="host-meta">{scope} ·
       {len(result.hosts)} device(s) · scanned in {result.duration_seconds:.1f}s ·
       {_e(result.finished_at)}</div>
+    {caveat_html}
   </header>
 
   {wifi_html}
   {wan_html}
 
-  <section class="card">
-    <h2>Devices &amp; findings</h2>
-    {hosts_html}
-  </section>
+  {devices_html}
 
   <footer>
     Generated locally by IoTpwned v{__version__}. No data left this machine.<br>
@@ -387,6 +437,23 @@ def _wan_html(result) -> str:
     src = ('<div class="host-meta" style="margin-top:10px">Source: Shodan '
            'InternetDB (its most recent scan; may be cached).</div>')
     return f'<section class="card"><h2>Internet exposure</h2>{body}{src}</section>'
+
+
+def _devices_html(result) -> str:
+    """The devices section — one card, or one card per subnet when multi."""
+    if not _is_multi_subnet(result):
+        hosts_html = "\n".join(_host_html(h) for h in result.hosts)
+        return (f'<section class="card"><h2>Devices &amp; findings</h2>'
+                f'{hosts_html}</section>')
+
+    cards = []
+    for subnet, hosts in _group_by_subnet(result):
+        hosts_html = "\n".join(_host_html(h) for h in hosts)
+        cards.append(
+            f'<section class="card"><h2>Subnet {_e(subnet)} · '
+            f'{len(hosts)} device(s)</h2>{hosts_html}</section>'
+        )
+    return "\n".join(cards)
 
 
 def _host_html(host: Host) -> str:

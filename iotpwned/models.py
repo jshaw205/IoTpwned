@@ -52,6 +52,9 @@ class Host:
     open_ports: List[OpenPort] = field(default_factory=list)
     findings: List["Finding"] = field(default_factory=list)
     is_gateway: bool = False
+    # The subnet (CIDR) this host was discovered on. Set when a scan covers
+    # more than one subnet so the report can group devices by network.
+    subnet: Optional[str] = None
 
     @property
     def worst_severity(self) -> Severity:
@@ -106,8 +109,11 @@ class WanInfo:
 class ScanResult:
     """The full result of one IoTpwned run."""
 
-    subnet: str
+    subnet: str  # display label; a comma-joined summary when multiple subnets
     hosts: List[Host] = field(default_factory=list)
+    # The individual subnets (CIDRs) covered by this run. One entry for a normal
+    # single-subnet scan; several when scanning multiple subnets/VLANs at once.
+    subnets: List[str] = field(default_factory=list)
     started_at: str = ""
     finished_at: str = ""
     duration_seconds: float = 0.0

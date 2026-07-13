@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_Nothing yet._
+### Added
+- **Multi-subnet / VLAN scanning** — `--cidr` can now be repeated or given a
+  comma-separated list to scan several subnets in one run
+  (e.g. `--cidr 192.168.1.0/24 --cidr 192.168.20.0/24`), and the web UI's subnet
+  box accepts a comma-separated list too. Devices are merged into one report,
+  grouped by subnet, with a single overall grade. The report notes that
+  MAC/vendor labels come from ARP (Layer-2) and only resolve within each
+  device's own subnet, so remote subnets show fewer details — and that this
+  machine must be able to route to each subnet for the scan to reach it.
 
 ## [0.8.0] - 2026-07-10
 

@@ -124,9 +124,11 @@ def build_index(token: str, error: Optional[str] = None) -> str:
       uploaded (unless you opt in to the online CVE lookup below).</div>
     <form method="POST" action="/scan" id="f">
       <input type="hidden" name="token" value="{token}">
-      <label for="cidr">Subnet to scan (optional)</label>
+      <label for="cidr">Subnet(s) to scan (optional)</label>
       <input type="text" id="cidr" name="cidr" placeholder="auto-detect, e.g. 192.168.1.0/24">
-      <div class="hint">Leave blank to auto-detect your local subnet.</div>
+      <div class="hint">Leave blank to auto-detect your local subnet. Separate
+        multiple subnets/VLANs with commas (e.g. 192.168.1.0/24, 192.168.20.0/24)
+        — this machine must be able to route to each one.</div>
       <label class="check"><input type="checkbox" name="consent" value="on">
         <span>I own or have permission to scan this network.</span></label>
       <label class="check"><input type="checkbox" name="online_cve" value="on">
@@ -223,10 +225,23 @@ def process_post(
     return 200, "text/html; charset=utf-8", _results_page(result).encode("utf-8")
 
 
+def _split_cidrs(value: Optional[str]) -> Optional[list]:
+    """Split a free-text subnet field on commas/whitespace into a CIDR list."""
+    if not value:
+        return None
+    out, seen = [], set()
+    for part in value.replace(" ", ",").split(","):
+        part = part.strip()
+        if part and part not in seen:
+            seen.add(part)
+            out.append(part)
+    return out or None
+
+
 def default_scan_fn(form: Dict[str, str]) -> ScanResult:
     """Run the real scan from submitted form values."""
-    cidr = (form.get("cidr") or "").strip() or None
-    result = engine.run_pipeline(cidr=cidr)
+    cidrs = _split_cidrs(form.get("cidr"))
+    result = engine.run_pipeline(cidrs=cidrs)
     if form.get("online_cve") == "on":
         engine.apply_online_cve(result)
     if form.get("wan_check") == "on":
