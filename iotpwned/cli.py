@@ -43,9 +43,12 @@ def build_parser() -> argparse.ArgumentParser:
         description="Privacy-first home network IoT security scanner.",
         epilog="Only scan networks you own or have permission to test.",
     )
-    p.add_argument("--cidr", metavar="CIDR",
+    p.add_argument("--cidr", metavar="CIDR", action="append",
                    help="Subnet to scan, e.g. 192.168.1.0/24 "
-                        "(default: auto-detect).")
+                        "(default: auto-detect). Repeat the flag or pass a "
+                        "comma-separated list to scan several subnets/VLANs at "
+                        "once, e.g. --cidr 192.168.1.0/24 --cidr 192.168.20.0/24 "
+                        "(this machine must be able to route to each one).")
     p.add_argument("--html", metavar="PATH",
                    help="Write a shareable HTML report to PATH.")
     p.add_argument("--json", metavar="PATH",
@@ -267,6 +270,25 @@ def _maybe_cred_check(result: ScanResult, args: argparse.Namespace) -> None:
         print(f"  Default-password check: {weak} device(s) on a DEFAULT password.")
 
 
+def _parse_cidrs(values: Optional[List[str]]) -> Optional[List[str]]:
+    """Flatten repeated/comma-separated ``--cidr`` values into an ordered list.
+
+    Accepts the raw argparse ``append`` list, splits each entry on commas (and
+    whitespace), trims blanks, and de-duplicates while preserving order.
+    """
+    if not values:
+        return None
+    out: List[str] = []
+    seen = set()
+    for value in values:
+        for part in value.replace(" ", ",").split(","):
+            part = part.strip()
+            if part and part not in seen:
+                seen.add(part)
+                out.append(part)
+    return out or None
+
+
 def _parse_ports(spec: Optional[str]) -> Optional[List[int]]:
     if not spec:
         return None
@@ -298,26 +320,39 @@ def _progress(stage: str):
 def run_scan(args: argparse.Namespace) -> ScanResult:
     ports = _parse_ports(args.ports)
 
-    cidr = args.cidr or default_subnet()
-    if not cidr:
-        raise SystemExit(
-            "Could not auto-detect your subnet. Pass one with "
-            "--cidr, e.g. --cidr 192.168.1.0/24"
-        )
+    cidrs = _parse_cidrs(args.cidr)
+    if not cidrs:
+        auto = default_subnet()
+        if not auto:
+            raise SystemExit(
+                "Could not auto-detect your subnet. Pass one with "
+                "--cidr, e.g. --cidr 192.168.1.0/24"
+            )
+        cidrs = [auto]
 
-    print(f"\nScanning {cidr} ...\n")
+    if len(cidrs) == 1:
+        print(f"\nScanning {cidrs[0]} ...\n")
+    else:
+        print(f"\nScanning {len(cidrs)} subnets: {', '.join(cidrs)} ...")
+        print("(Each subnet must be reachable from this machine — see the note "
+              "in the report about VLANs.)\n")
+
+    def _subnet_start(cidr, idx, total):
+        if total > 1:
+            print(f"\n[{cidr}]  (subnet {idx + 1} of {total})")
 
     def _found(hosts):
         print(f"  Found {len(hosts)} device(s). Scanning ports ...")
 
     return engine.run_pipeline(
-        cidr=cidr,
+        cidrs=cidrs,
         ports=ports,
         timeout=args.timeout,
         ping_timeout=args.ping_timeout,
         do_ping=not args.no_ping,
         resolve=not args.no_resolve,
         do_wifi=not args.no_wifi,
+        on_subnet_start=_subnet_start,
         on_discovery_progress=_progress("Pinging"),
         on_hosts_discovered=_found,
         on_scan_progress=_progress("Port-scanning"),
@@ -339,6 +374,7 @@ def _finding_json(f) -> dict:
 def _write_json(result: ScanResult, path: str) -> None:
     payload = {
         "subnet": result.subnet,
+        "subnets": result.subnets or [result.subnet],
         "grade": result.grade,
         "score": result.score,
         "started_at": result.started_at,
@@ -373,6 +409,7 @@ def _write_json(result: ScanResult, path: str) -> None:
         "hosts": [
             {
                 "ip": h.ip,
+                "subnet": h.subnet,
                 "mac": h.mac,
                 "vendor": h.vendor,
                 "hostname": h.hostname,
